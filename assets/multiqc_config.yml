@@ -1,0 +1,18 @@
+report_comment: >
+  This report has been generated
+report_section_order:
+  software_versions:
+    order: -1001
+
+export_plots: true
+
+# Run only these modules
+run_modules:
+  - fastqc
+
+module_order:
+  - fastqc:
+      name: "FastQC (raw)"
+      path_filters_exclude:
+        - "*_val_*.zip"
+
