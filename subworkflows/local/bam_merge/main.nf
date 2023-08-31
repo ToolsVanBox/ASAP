@@ -22,9 +22,8 @@ workflow BAM_MERGE {
         // Merge bam file with samtools
         SAMTOOLS_MERGE ( ch_bams, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix(SAMTOOLS_MERGE.out.versions.first())
-    } else {
-        error( "Cannot merge bam file with tool ${bam_merge_tools}. This module is not build in (yet)." )
-    }
+    } 
+    
     // Sort, index BAM file and run samtools stats, flagstat and idxstats    
 
     BAM_SORT_STATS_SAMTOOLS ( SAMTOOLS_MERGE.out.bam, ch_fasta )

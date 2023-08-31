@@ -11,9 +11,11 @@ input_sample_type = input_sample.branch{
     }
 
 workflow WAP {
-    // FASTQ_QC_PRE_MAPPING( input_sample_type.fastq )    
+    FASTQ_QC_PRE_MAPPING( input_sample_type.fastq )    
 
     FASTQ_ALIGN( input_sample_type.fastq )
+
+    input_bams = input_sample_type.bam.mix( FASTQ_ALIGN.out.bam )
 
 }
 
@@ -56,7 +58,7 @@ def parseSampleSheet(csv_file) {
                 def bam = file(row.bam, checkIfExists: true)
                 meta.data_type = "bam"
                 def bai = file(row.bai, checkIfExists: true)
-                return [ meta, [bam, bai] ]
+                return [ meta, bam, bai ]
             }
         }
 }

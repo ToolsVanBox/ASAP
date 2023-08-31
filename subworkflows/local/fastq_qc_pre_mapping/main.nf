@@ -14,7 +14,7 @@ workflow FASTQ_QC_PRE_MAPPING {
 
     // Convert input tools to UpperCase
     fastqc_qc_pre_mapping_tools = params.fastq_qc_pre_mapping.tool.toString().toUpperCase()
-
+    
     // Run FastQC 
     if ( fastqc_qc_pre_mapping_tools  == "FASTQC" | fastqc_qc_pre_mapping_tools.contains("FASTQC") ) {
         FASTQC( fastq )
@@ -44,10 +44,6 @@ workflow FASTQ_QC_PRE_MAPPING {
 
       multiqc_report = MULTIQC.out.report.toList()
       versions = versions.mix(MULTIQC.out.versions)
-    }
-
-    else {
-      error( "Cannot QC on fastq files with tool ${fastqc_qc_pre_mapping_tools}. This (or one of the) module(s) is not build in (yet)." )
     }
 
   emit:
