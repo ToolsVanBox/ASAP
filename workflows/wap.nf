@@ -4,12 +4,16 @@ nextflow.enable.dsl=2
 include { FASTQ_QC_PRE_MAPPING } from '../subworkflows/local/fastq_qc_pre_mapping/main.nf'
 include { FASTQ_ALIGN } from '../subworkflows/local/fastq_align/main.nf'
 
-input_fastqs = parseSampleSheet( params.input )
+input_sample = parseSampleSheet( params.input )
+input_sample_type = input_sample.branch{
+        bam:   it[0].data_type == "bam"
+        fastq: it[0].data_type == "fastq"
+    }
 
 workflow WAP {
-    // FASTQ_QC_PRE_MAPPING( input_fastqs )    
+    // FASTQ_QC_PRE_MAPPING( input_sample_type.fastq )    
 
-    FASTQ_ALIGN( input_fastqs )
+    FASTQ_ALIGN( input_sample_type.fastq )
 
 }
 
@@ -31,9 +35,11 @@ def parseSampleSheet(csv_file) {
         }.transpose()
         .map { row, num_lanes ->
             def meta = [:]
+            def sample_id = row.sample_id
+            meta.sample_id = sample_id
+
             // mapping with fastq
             if (row.fastq_2) {
-                def sample_id = row.sample_id
                 def fastq_1 = file(row.fastq_1, checkIfExists: true)
                 def fastq_2 = file(row.fastq_2, checkIfExists: true)
                 def platform = row.platform ?: "ILLUMINA"
@@ -42,8 +48,15 @@ def parseSampleSheet(csv_file) {
                 def read_group  = "\"@RG\\tID:${rg_id}\\tSM:${sample_id}\\tPL:${platform}\\tLB:${sample_id}\\tPU:${flowcell}\""
                 meta.id = rg_id.toString()                
                 meta.read_group = read_group.toString()
-                                
-                return[ meta, [ fastq_1, fastq_2 ] ]
+                meta.data_type = "fastq"
+                return [ meta, [ fastq_1, fastq_2 ] ]
+            }
+            // bam part 
+            if (row.bam) {
+                def bam = file(row.bam, checkIfExists: true)
+                meta.data_type = "bam"
+                def bai = file(row.bai, checkIfExists: true)
+                return [ meta, [bam, bai] ]
             }
         }
 }

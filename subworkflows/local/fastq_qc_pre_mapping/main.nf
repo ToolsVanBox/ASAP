@@ -46,6 +46,10 @@ workflow FASTQ_QC_PRE_MAPPING {
       versions = versions.mix(MULTIQC.out.versions)
     }
 
+    else {
+      error( "Cannot QC on fastq files with tool ${fastqc_qc_pre_mapping_tools}. This (or one of the) module(s) is not build in (yet)." )
+    }
+
   emit:
     reports
     versions
