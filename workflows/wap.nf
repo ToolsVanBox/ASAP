@@ -3,6 +3,9 @@ nextflow.enable.dsl=2
 
 include { FASTQ_QC_PRE_MAPPING } from '../subworkflows/local/fastq_qc_pre_mapping/main.nf'
 include { FASTQ_ALIGN } from '../subworkflows/local/fastq_align/main.nf'
+include { BAM_MARKDUPLICATES } from '../subworkflows/local/bam_markduplicates/main.nf'
+include { BAM_FINGERPRINT } from '../subworkflows/local/bam_fingerprint/main.nf'
+include { BAM_GERMLINE_SHORT_VARIANT_DISCOVERY } from '../subworkflows/local/bam_germline_short_variant_discovery/main.nf'
 
 input_sample = parseSampleSheet( params.input )
 input_sample_type = input_sample.branch{
@@ -15,8 +18,19 @@ workflow WAP {
 
     FASTQ_ALIGN( input_sample_type.fastq )
 
-    input_bams = input_sample_type.bam.mix( FASTQ_ALIGN.out.bam )
+    BAM_MARKDUPLICATES( FASTQ_ALIGN.out.bam )
+    
+    input_bams = input_sample_type.bam
+        .mix( BAM_MARKDUPLICATES.out.bam )
+        .map{ meta, bam ,bai -> 
+            [[id: meta.id, sample_id: meta.sample_id],bam ,bai ]
+        }
 
+    BAM_FINGERPRINT( input_bams )
+
+    if ( params.run.germline_short_variant_discovery ) {
+        BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( input_bams )
+    }
 }
 
 def parseSampleSheet(csv_file) {
