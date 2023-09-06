@@ -43,7 +43,7 @@ workflow FASTQ_ALIGN {
         FASTQ_ALIGN_BWA( input_fastqs, bwa_index, bam_sort, ch_fasta )
         
         bwamem1_bams = FASTQ_ALIGN_BWA.out.bam
-          .map{ meta, bam -> [ [sample_id: meta.sample_id, id:meta.sample_id+"_${tool}", tool:"${tool}"], bam ] }
+          .map{ meta, bam -> [ [sample_id: meta.sample_id, id:meta.sample_id+".${tool}", tool:"${tool}"], bam ] }
           .groupTuple()
 
         input_bam_merge = input_bam_merge.mix( bwamem1_bams )
@@ -80,7 +80,7 @@ workflow FASTQ_ALIGN {
 
     bams = BAM_MERGE.out.bam
       .join( BAM_MERGE.out.bai )
-      
+
     emit:
       bam = bams
 }
