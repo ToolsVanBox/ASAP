@@ -35,6 +35,31 @@
             "git_sha": "bd8092b67b5103bdd52e300f75889442275c3117",
             "installed_by": ["modules"]
           },
+          "gatk4/applybqsr": {
+            "branch": "master",
+            "git_sha": "240937a2a9c30298110753292be041188891f2cb",
+            "installed_by": ["modules"]
+          },
+          "gatk4/baserecalibrator": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
+          "gatk4/markduplicates": {
+            "branch": "master",
+            "git_sha": "0a261469640941da2488e1a5aa023b64db837c70",
+            "installed_by": ["modules"]
+          },
+          "gatk4/markduplicatesspark": {
+            "branch": "master",
+            "git_sha": "0a261469640941da2488e1a5aa023b64db837c70",
+            "installed_by": ["modules"]
+          },
+          "gatk4/splitintervals": {
+            "branch": "master",
+            "git_sha": "541811d779026c5d395925895fa5ed35e7216cc0",
+            "installed_by": ["modules"]
+          },
           "multiqc": {
             "branch": "master",
             "git_sha": "a6e11ac655e744f7ebc724be669dd568ffdc0e80",
@@ -44,6 +69,21 @@
             "branch": "master",
             "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
             "installed_by": ["modules"]
+          },
+          "picard/markduplicates": {
+            "branch": "master",
+            "git_sha": "735e1e04e7e01751d2d6e97055bbdb6f70683cc1",
+            "installed_by": ["bam_markduplicates_picard"]
+          },
+          "samtools/collate": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["bam_markduplicates_samtools"]
+          },
+          "samtools/fixmate": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["bam_markduplicates_samtools"]
           },
           "samtools/flagstat": {
             "branch": "master",
@@ -58,7 +98,15 @@
           "samtools/index": {
             "branch": "master",
             "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
-            "installed_by": ["bam_sort_stats_samtools"]
+            "installed_by": [
+              "bam_sort_stats_samtools",
+              "bam_markduplicates_picard"
+            ]
+          },
+          "samtools/markdup": {
+            "branch": "master",
+            "git_sha": "9e51255c4f8ec69fb6ccf68593392835f14fecb8",
+            "installed_by": ["bam_markduplicates_samtools"]
           },
           "samtools/merge": {
             "branch": "master",
@@ -68,7 +116,10 @@
           "samtools/sort": {
             "branch": "master",
             "git_sha": "a0f7be95788366c1923171e358da7d049eb440f9",
-            "installed_by": ["bam_sort_stats_samtools"]
+            "installed_by": [
+              "bam_markduplicates_samtools",
+              "bam_sort_stats_samtools"
+            ]
           },
           "samtools/stats": {
             "branch": "master",
@@ -79,6 +130,16 @@
       },
       "subworkflows": {
         "nf-core": {
+          "bam_markduplicates_picard": {
+            "branch": "master",
+            "git_sha": "dedc0e31087f3306101c38835d051bf49789445a",
+            "installed_by": ["subworkflows"]
+          },
+          "bam_markduplicates_samtools": {
+            "branch": "master",
+            "git_sha": "dedc0e31087f3306101c38835d051bf49789445a",
+            "installed_by": ["subworkflows"]
+          },
           "bam_sort_stats_samtools": {
             "branch": "master",
             "git_sha": "dedc0e31087f3306101c38835d051bf49789445a",
@@ -87,7 +148,10 @@
           "bam_stats_samtools": {
             "branch": "master",
             "git_sha": "dedc0e31087f3306101c38835d051bf49789445a",
-            "installed_by": ["bam_sort_stats_samtools"]
+            "installed_by": [
+              "bam_sort_stats_samtools",
+              "bam_markduplicates_picard"
+            ]
           },
           "fastq_align_bwa": {
             "branch": "master",
