@@ -1,11 +1,15 @@
 
 nextflow.enable.dsl=2
 
+// Include local subworkflows
 include { FASTQ_QC_PRE_MAPPING } from '../subworkflows/local/fastq_qc_pre_mapping/main.nf'
 include { FASTQ_ALIGN } from '../subworkflows/local/fastq_align/main.nf'
 include { BAM_MARKDUPLICATES } from '../subworkflows/local/bam_markduplicates/main.nf'
 include { BAM_FINGERPRINT } from '../subworkflows/local/bam_fingerprint/main.nf'
 include { BAM_GERMLINE_SHORT_VARIANT_DISCOVERY } from '../subworkflows/local/bam_germline_short_variant_discovery/main.nf'
+
+// Include nf-core modules
+include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main.nf'
 
 input_sample = parseSampleSheet( params.input )
 input_sample_type = input_sample.branch{
@@ -14,26 +18,46 @@ input_sample_type = input_sample.branch{
     }
 
 workflow WAP {
-    FASTQ_QC_PRE_MAPPING( input_sample_type.fastq )    
+
+    ch_versions = Channel.empty()
+
+    // FASTQ_QC_PRE_MAPPING( input_sample_type.fastq )    
+    // ch_versions = ch_versions.mix( FASTQ_QC_PRE_MAPPING.out.versions )
 
     FASTQ_ALIGN( input_sample_type.fastq )
+    ch_versions = ch_versions.mix( FASTQ_ALIGN.out.versions )
 
     BAM_MARKDUPLICATES( FASTQ_ALIGN.out.bam )
-    
-    input_bams = input_sample_type.bam
+    ch_versions = ch_versions.mix( BAM_MARKDUPLICATES.out.versions )
+
+    ch_bams = input_sample_type.bam
         .mix( BAM_MARKDUPLICATES.out.bam )
         .map{ meta, bam ,bai -> 
-            [[id: meta.id, sample_id: meta.sample_id],bam ,bai ]
+            [[id: meta.id, sample_id: meta.sample_id, run_id: run_id],bam ,bai ]
         }
 
-    BAM_FINGERPRINT( input_bams )
+    BAM_FINGERPRINT( ch_bams )
+    ch_versions = ch_versions.mix( BAM_FINGERPRINT.out.versions )
 
     if ( params.run.germline_short_variant_discovery ) {
-        BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( input_bams )
+        BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( ch_bams )
     }
+
+    CUSTOM_DUMPSOFTWAREVERSIONS(ch_versions.unique().collectFile(name: 'collated_versions.yml'))
+    version_yaml = CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect()
 }
 
 def parseSampleSheet(csv_file) {
+
+    if ( ! params.run_id ) {
+    run_id = params.out_dir.split('/')[-1]
+    if ( params.out_dir == './' ) {
+        run_id = "${PWD}".split('/')[-1]
+    }
+    } else {
+        run_id = params.run_id
+    }
+
     Channel.fromPath(csv_file).splitCsv(header: true)
         // Retrieves number of lanes by grouping together by patient and sample and counting how many entries there are for this combination
         .map{ row ->
@@ -53,6 +77,10 @@ def parseSampleSheet(csv_file) {
             def meta = [:]
             def sample_id = row.sample_id
             meta.sample_id = sample_id
+            meta.run_id = run_id
+            meta.workflow = [:]
+            meta.workflow.name = null
+            meta.workflow.tool = null
 
             // mapping with fastq
             if (row.fastq_2) {
