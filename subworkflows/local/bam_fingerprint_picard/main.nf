@@ -1,6 +1,7 @@
 //
 // BAM FINGERPRINT PICARD
 
+// Include nf-core modules
 include { PICARD_CROSSCHECKFINGERPRINTS } from '../../../modules/nf-core/picard/crosscheckfingerprints/main'                             
 
 
@@ -11,11 +12,10 @@ workflow BAM_FINGERPRINT_PICARD {
     ch_haplotype // channel: [ path(haplotype) ]    
   
   main:
-
     ch_versions = Channel.empty()
-    println "RUN PICARD CROSS CHECK FINGERPRINTS"
     
     PICARD_CROSSCHECKFINGERPRINTS( ch_bams, ch_input2, ch_haplotype )
+    ch_versions = ch_versions.mix( PICARD_CROSSCHECKFINGERPRINTS.out.versions )  
 
   emit:
     versions = ch_versions                       // channel: [ versions.yml ]

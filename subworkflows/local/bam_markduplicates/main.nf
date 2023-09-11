@@ -1,104 +1,95 @@
 //
 // BAM MARKDUPLICATES
 
-include { BAM_MARKDUPLICATES_PICARD } from '../../nf-core/bam_markduplicates_picard/main'                             
-include { BAM_MARKDUPLICATES_SAMTOOLS } from '../../local/bam_markduplicates_samtools/main'        
-include { BAM_MARKDUPLICATES_SPARK } from '../../local/bam_markduplicates_spark/main'       
-include { BAM_MARKDUPLICATES_GATK } from '../../local/bam_markduplicates_gatk/main'
+// Include nf-core subworkflows
+include { BAM_MARKDUPLICATES_PICARD } from '../../../subworkflows/nf-core/bam_markduplicates_picard/main'                             
+
+// Include local subworkflows
+include { BAM_MARKDUPLICATES_SAMTOOLS } from '../../../subworkflows/local/bam_markduplicates_samtools/main'        
+include { BAM_MARKDUPLICATES_GATK4SPARK } from '../../../subworkflows/local/bam_markduplicates_gatk4spark/main'       
+include { BAM_MARKDUPLICATES_GATK4 } from '../../../subworkflows/local/bam_markduplicates_gatk4/main'
 
 
 workflow BAM_MARKDUPLICATES {
   take:
-    input_bams 
+    ch_bams // channel: [ meta, path(bam) ] 
   main:
-    
-    // Convert input tools to UpperCase
-    bam_markduplicates_tools = params.bam_markduplicates.tool.toString().toUpperCase()
-
-    ch_bams = input_bams.map{ meta, bam, bai -> [ meta + [ step:"bam_markduplicates" ], bam ] } 
-    
-    def fasta_file = file( params.genomes[params.genome].fasta, checkIfExists: true )
-    def fai_file = file( fasta_file.toString()+".fai", checkIfExists: true )
-    def dict_file = file( fasta_file.toString()+".dict", checkIfExists: true )
-
-    ch_fasta = Channel.value( fasta_file )
-      .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
-    ch_fai = Channel.value( fai_file )
-      .map{ genome_fai -> [ [ id:'fai' ], genome_fai ] }
-    ch_dict = Channel.value( dict_file )
-
-    ch_fasta_2 = ch_fasta.map{ meta, fasta -> [ fasta ] }
-    ch_fai_2 = ch_fai.map{ meta, fai -> [ fai ] }
-    
     ch_versions = Channel.empty()
+    ch_dedup_bams = Channel.empty()
 
-    bams = Channel.empty()
+    def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
+    def fai = file( fasta.toString()+".fai", checkIfExists: true )
+    def fasta_dict = file( fasta.toString()+".dict", checkIfExists: true )
+    def dict = file( fasta.toString().replace(".fasta",".dict" ), checkIfExists: true )
+    
+    ch_fasta = Channel.value( fasta )
+      .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
+    ch_fai = Channel.value( fai )
+      .map{ genome_fai -> [ [ id:'fai' ], genome_fai ] }
 
-    if ( bam_markduplicates_tools == "PICARD" | bam_markduplicates_tools.contains("PICARD") ) {
-        tool = "picard"
+    ch_bams = ch_bams.map{ meta, bam, bai -> [ meta, bam ] }
+        
+    for ( tool in params.bam_markduplicates.tool ) {
+      tool = tool.toLowerCase()      
+      known_tool = false    
 
-        ch_bams = ch_bams
-          .map{ meta, bam -> 
-            meta.id = meta.id+".${tool}.dedup" 
-            [ meta, bam ]
+      // Run Picard Markduplicates
+      if ( tool == "picard" ) {          
+          ch_bams_picard = ch_bams.map{ meta, bam -> [ [ sample_id: meta.sample_id, id: meta.id+".picard.dedup" ], bam ] }
+          
+          BAM_MARKDUPLICATES_PICARD( ch_bams_picard, ch_fasta, ch_fai )
+          ch_versions = ch_versions.mix( BAM_MARKDUPLICATES_PICARD.out.versions )
+          
+          ch_dedup_bams = ch_dedup_bams.mix( BAM_MARKDUPLICATES_PICARD.out.bam.join( BAM_MARKDUPLICATES_PICARD.out.bai ) )
+
+          known_tool = true
+      } 
+
+      // Run Samtools Markduplicates
+      if ( tool == "samtools" ) {   
+          ch_bams_samtools = ch_bams.map{ meta, bam -> [ [ sample_id: meta.sample_id, id: meta.id+".samtools.dedup" ], bam ] }
+        
+          BAM_MARKDUPLICATES_SAMTOOLS( ch_bams_samtools, fasta )
+          ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_SAMTOOLS.out.versions)
+
+          ch_dedup_bams = ch_dedup_bams.mix(BAM_MARKDUPLICATES_SAMTOOLS.out.bam.join( BAM_MARKDUPLICATES_SAMTOOLS.out.bai) )
+          
+          known_tool = true
+
+      }
+
+      // Run GATK4 Spark Markduplicates
+      if ( tool == "gatk4spark" ) {
+          ch_bams_spark = ch_bams.map{ meta, bam -> [ [ sample_id: meta.sample_id, id: meta.id+".gatk4spark.dedup" ], bam ] }
+
+          BAM_MARKDUPLICATES_GATK4SPARK( ch_bams_spark, fasta, fai, dict )
+          ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_GATK4SPARK.out.versions)
+
+          ch_dedup_bams = ch_dedup_bams.mix(BAM_MARKDUPLICATES_GATK4SPARK.out.bam.join( BAM_MARKDUPLICATES_GATK4SPARK.out.bai) )
+
+          known_tool = true
+
         }
 
-        BAM_MARKDUPLICATES_PICARD( ch_bams, ch_fasta, ch_fai )   
+      // Run GATK4 Markduplicates
+      if ( tool == "gatk4" ) {        
+        ch_bams_gatk = ch_bams.map{ meta, bam -> [ [ sample_id: meta.sample_id, id: meta.id+".gatk4.dedup" ], bam ] } 
 
-        ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_PICARD.out.versions)
-        
-        bams = bams.mix(BAM_MARKDUPLICATES_PICARD.out.bam.join( BAM_MARKDUPLICATES_PICARD.out.bai) )
+        BAM_MARKDUPLICATES_GATK4( ch_bams_gatk, fasta, fai )
+        ch_versions = ch_versions.mix( BAM_MARKDUPLICATES_GATK4.out.versions )
 
-    } 
+        ch_dedup_bams = ch_dedup_bams.mix(BAM_MARKDUPLICATES_GATK4.out.bam.join( BAM_MARKDUPLICATES_GATK4.out.bai ) )
 
-    if ( bam_markduplicates_tools == "SAMTOOLS" | bam_markduplicates_tools.contains("SAMTOOLS") ) {
-        tool = "samtools"          
+        known_tool = true
+      }
 
-        ch_bams = ch_bams
-          .map{ meta, bam -> 
-            meta.id = meta.id+".${tool}.dedup" 
-            [ meta, bam ]
-        }
-        
-        BAM_MARKDUPLICATES_SAMTOOLS( ch_bams, ch_fasta_2 )
-        ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_SAMTOOLS.out.versions)
-
-        bams = bams.mix(BAM_MARKDUPLICATES_SAMTOOLS.out.bam.join( BAM_MARKDUPLICATES_SAMTOOLS.out.bai) )
-
+      if ( ! known_tool ) {
+       println ("WARNING: Skip ${tool}, because it's not known as a bam markdup tool, this tool is not build in (yet).")
+      }
     }
-
-    if ( bam_markduplicates_tools == "SPARK" | bam_markduplicates_tools.contains("SPARK") ) {
-      tool = "spark"
-
-      ch_bams = ch_bams
-        .map{ meta, bam -> 
-          meta.id = meta.id+".${tool}.dedup" 
-          [ meta, bam ]
-      }      
-      BAM_MARKDUPLICATES_SPARK( ch_bams, ch_fasta, ch_fai_2, ch_dict )
-      ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_SPARK.out.versions)
-
-      bams = bams.mix(BAM_MARKDUPLICATES_SPARK.out.bam.join( BAM_MARKDUPLICATES_SPARK.out.bai) )
-
-    }
-
-    if ( bam_markduplicates_tools == "GATK" | bam_markduplicates_tools.contains("GATK") ) {
-      tool = "gatk"
-
-      ch_bams = ch_bams
-        .map{ meta, bam -> 
-          meta.id = meta.id+".${tool}.dedup" 
-          [ meta, bam ]
-      }      
-      BAM_MARKDUPLICATES_GATK( ch_bams, ch_fasta, ch_fai_2 )
-      ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_GATK.out.versions)
-
-      bams = bams.mix(BAM_MARKDUPLICATES_GATK.out.bam.join( BAM_MARKDUPLICATES_GATK.out.bai) )
-
-    }
-
   emit:
-    bam = bams
+    bam = ch_dedup_bams // channel: [ meta, bam, bai ]
+    versions = ch_versions // channel: [ versions.yml ]
 
 }
 

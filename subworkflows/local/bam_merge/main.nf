@@ -2,8 +2,11 @@
 // Merge bams files with Samtools
 //
 
-include { SAMTOOLS_MERGE } from '../../../modules/nf-core/samtools/merge/main'                                                                                       
-include { BAM_SORT_STATS_SAMTOOLS } from '../../nf-core/bam_sort_stats_samtools/main'
+// Include nf-core modules
+include { SAMTOOLS_MERGE } from '../../../modules/nf-core/samtools/merge/main'
+
+// Include nf-core subworkflows
+include { BAM_SORT_STATS_SAMTOOLS } from '../../../subworkflows/nf-core/bam_sort_stats_samtools/main'
 
 workflow BAM_MERGE {
     take:
@@ -13,7 +16,6 @@ workflow BAM_MERGE {
     
     main:
     ch_versions = Channel.empty()
-
     
     // Convert input tools to UpperCase
     bam_merge_tools = params.bam_merge.tool.toString().toUpperCase()

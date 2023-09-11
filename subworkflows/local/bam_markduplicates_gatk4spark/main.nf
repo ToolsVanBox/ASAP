@@ -1,24 +1,27 @@
 //
-// BAM MARKDUPLICATES
+// BAM MARKDUPLICATES GATK4 Spark
 
- include { GATK4_MARKDUPLICATES_SPARK } from '../../../modules/nf-core/gatk4/markduplicatesspark/main'        
-
+// Include nf-core modules
+include { GATK4_MARKDUPLICATES_SPARK } from '../../../modules/nf-core/gatk4/markduplicatesspark/main'        
 include { SAMTOOLS_INDEX        } from '../../../modules/nf-core/samtools/index/main'
-include { BAM_STATS_SAMTOOLS    } from '../../nf-core/bam_stats_samtools/main'
 
-workflow BAM_MARKDUPLICATES_SPARK {
+// Include nf-core subworkflows
+include { BAM_STATS_SAMTOOLS    } from '../../../subworkflows/nf-core/bam_stats_samtools/main'
+
+workflow BAM_MARKDUPLICATES_GATK4SPARK {
   take:
     ch_bams   // channel: [ val(meta), path(bam) ]
-    ch_fasta // channel: [ val(meta), path(fasta) ]
-    ch_fai // channel: [ path(fai) ]
-    ch_dict // channel: [ path(dict) ]
+    fasta // path(fasta)
+    fai // path(fai)
+    dict // path(dict)
 
   main:
     ch_versions = Channel.empty()
     
-    ch_fasta_2 = ch_fasta.map{ meta, fasta -> [ fasta ] }
+    ch_fasta = Channel.value( fasta )
+      .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] } 
 
-    GATK4_MARKDUPLICATES_SPARK( ch_bams, ch_fasta_2, ch_fai, ch_dict )
+    GATK4_MARKDUPLICATES_SPARK( ch_bams, fasta, fai, dict )
     ch_versions = ch_versions.mix(GATK4_MARKDUPLICATES_SPARK.out.versions)
 
     SAMTOOLS_INDEX ( GATK4_MARKDUPLICATES_SPARK.out.output )

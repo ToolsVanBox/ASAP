@@ -1,40 +1,36 @@
 //
 // BAM FINGERPRINT
 
-include { BAM_FINGERPRINT_PICARD } from '../../local/bam_fingerprint_picard/main'                             
-
+// Include local subworkflows
+include { BAM_FINGERPRINT_PICARD } from '../../../subworkflows/local/bam_fingerprint_picard/main'                             
 
 workflow BAM_FINGERPRINT {
   take:
-    input_bams 
+    ch_bams // channel: [ meta, path(bam), path(bai) ] 
   main:
-    
-    // Convert input tools to UpperCase
-    bam_fingerprint_tools = params.bam_fingerprint.tool.toString().toUpperCase()
-
-    ch_bams = input_bams.map{ meta, bam, bai -> [ meta + [ step:"bam_fingerprint" ], bam ] } 
+    ch_versions = Channel.empty() 
     
     def haplotype_file = file( params.genomes[params.genome].haplotype, checkIfExists: true )
-    
     ch_haplotype = Channel.value( haplotype_file )
-    ch_versions = Channel.empty()
+    
+    for ( tool in params.bam_fingerprint.tool ) {
+      tool = tool.toLowerCase()      
+      known_tool = false    
 
-    if ( bam_fingerprint_tools == "PICARD" | bam_fingerprint_tools.contains("PICARD") ) {
-      tool = "picard"
-      println "${tool}"
-      ch_bams = ch_bams
-        .map{ meta, bam ->
-          [ [], bam ]
-        }
-        .groupTuple()
-        
-      // ch_input2 = Channel.value( null )
-      
-      BAM_FINGERPRINT_PICARD( ch_bams, [], ch_haplotype )   
-      ch_versions = ch_versions.mix(BAM_FINGERPRINT_PICARD.out.versions)
+      // Run Picard Fingerprint
+      if ( tool == "picard" ) {
+          ch_bams_picard = ch_bams.map{ meta, bam, bai -> [ [ run_id:meta.run_id ], bam ] }.groupTuple()
+          
+          BAM_FINGERPRINT_PICARD( ch_bams_picard, [], ch_haplotype )   
+          ch_versions = ch_versions.mix( BAM_FINGERPRINT_PICARD.out.versions )  
+          
+          known_tool = true
+      }
 
+      if ( ! known_tool ) {
+       println ("WARNING: Skip ${tool}, because it's not known as a bam fingerprint tool, this tool is not build in (yet).")
+      }
     }
-
+  emit:
+    versions = ch_versions // channel: [ versions.yml ]
 }
-
-

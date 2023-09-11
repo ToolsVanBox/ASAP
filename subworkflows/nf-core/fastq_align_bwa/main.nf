@@ -2,8 +2,11 @@
 // Alignment with BWA
 //
 
+// Include nf-core modules
 include { BWA_MEM                 } from '../../../modules/nf-core/bwa/mem/main'
-include { BAM_SORT_STATS_SAMTOOLS } from '../bam_sort_stats_samtools/main'
+
+// Include nf-core subworkflows
+include { BAM_SORT_STATS_SAMTOOLS } from '../../../subworkflows/nf-core/bam_sort_stats_samtools/main'
 
 workflow FASTQ_ALIGN_BWA {
     take:

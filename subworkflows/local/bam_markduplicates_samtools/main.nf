@@ -1,26 +1,30 @@
 //
 // BAM MARKDUPLICATES SAMTOOLS
 
-include { BAM_MARKDUPLICATES_SAMTOOLS } from '../../nf-core/bam_markduplicates_samtools/main'                         
+// Include nf-core subworkflows
+include { BAM_MARKDUPLICATES_SAMTOOLS as BAM_MARKDUPLICATES_SAMTOOLS_NFCORE } from '../../../subworkflows/nf-core/bam_markduplicates_samtools/main'                         
+include { BAM_STATS_SAMTOOLS    } from '../../../subworkflows/nf-core/bam_stats_samtools/main'
 
+// Include nf-core modules
 include { SAMTOOLS_INDEX        } from '../../../modules/nf-core/samtools/index/main'
-include { BAM_STATS_SAMTOOLS    } from '../../nf-core/bam_stats_samtools/main'
 
 workflow BAM_MARKDUPLICATES_SAMTOOLS {
   take:
     ch_bams   // channel: [ val(meta), path(bam) ]
-    ch_fasta // channel: [ path(fasta) ]
+    fasta // path(fasta)
     
   main:
     ch_versions = Channel.empty()
-        
-    BAM_MARKDUPLICATES_SAMTOOLS( ch_bams, ch_fasta )
-    ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_SAMTOOLS.out.versions)
+    ch_fasta = Channel.value( fasta )
+      .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
+    
+    BAM_MARKDUPLICATES_SAMTOOLS_NFCORE( ch_bams, fasta )
+    ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_SAMTOOLS_NFCORE.out.versions)
 
-    SAMTOOLS_INDEX ( BAM_MARKDUPLICATES_SAMTOOLS.out.bam )
+    SAMTOOLS_INDEX ( BAM_MARKDUPLICATES_SAMTOOLS_NFCORE.out.bam )
     ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions)
 
-    ch_bam_bai = BAM_MARKDUPLICATES_SAMTOOLS.out.bam
+    ch_bam_bai = BAM_MARKDUPLICATES_SAMTOOLS_NFCORE.out.bam
       .join(SAMTOOLS_INDEX.out.bai, by: [0], remainder: true)
       .join(SAMTOOLS_INDEX.out.csi, by: [0], remainder: true)
       .map {
@@ -35,7 +39,7 @@ workflow BAM_MARKDUPLICATES_SAMTOOLS {
     ch_versions = ch_versions.mix(BAM_STATS_SAMTOOLS.out.versions)
   
   emit:
-    bam      = BAM_MARKDUPLICATES_SAMTOOLS.out.bam     // channel: [ val(meta), path(bam) ]
+    bam      = BAM_MARKDUPLICATES_SAMTOOLS_NFCORE.out.bam     // channel: [ val(meta), path(bam) ]
     bai      = SAMTOOLS_INDEX.out.bai            // channel: [ val(meta), path(bai) ]
     csi      = SAMTOOLS_INDEX.out.csi            // channel: [ val(meta), path(csi) ]
 
