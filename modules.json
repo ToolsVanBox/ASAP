@@ -45,6 +45,21 @@
             "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
             "installed_by": ["modules"]
           },
+          "gatk4/combinegvcfs": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
+          "gatk4/genotypegvcfs": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
+          "gatk4/haplotypecaller": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
           "gatk4/markduplicates": {
             "branch": "master",
             "git_sha": "0a261469640941da2488e1a5aa023b64db837c70",
@@ -53,6 +68,11 @@
           "gatk4/markduplicatesspark": {
             "branch": "master",
             "git_sha": "0a261469640941da2488e1a5aa023b64db837c70",
+            "installed_by": ["modules"]
+          },
+          "gatk4/mergevcfs": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
             "installed_by": ["modules"]
           },
           "gatk4/splitintervals": {
