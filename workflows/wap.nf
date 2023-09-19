@@ -5,8 +5,11 @@ nextflow.enable.dsl=2
 include { FASTQ_QC_PRE_MAPPING } from '../subworkflows/local/fastq_qc_pre_mapping/main.nf'
 include { FASTQ_ALIGN } from '../subworkflows/local/fastq_align/main.nf'
 include { BAM_MARKDUPLICATES } from '../subworkflows/local/bam_markduplicates/main.nf'
+include { BAM_QC_POST_MAPPING } from '../subworkflows/local/bam_qc_post_mapping/main.nf'
 include { BAM_FINGERPRINT } from '../subworkflows/local/bam_fingerprint/main.nf'
 include { BAM_GERMLINE_SHORT_VARIANT_DISCOVERY } from '../subworkflows/local/bam_germline_short_variant_discovery/main.nf'
+include { BAM_GERMLINE_COPY_NUMBER_DISCOVERY } from '../subworkflows/local/bam_germline_copy_number_discovery/main.nf'
+include { BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY } from '../subworkflows/local/bam_germline_structural_variant_discovery/main.nf'
 
 // Include nf-core modules
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main.nf'
@@ -20,31 +23,70 @@ input_sample_type = input_sample.branch{
 workflow WAP {
 
     ch_versions = Channel.empty()
+    ch_bams = Channel.empty()
+    ch_other_bams = Channel.empty()
+    ch_dedup_bams = Channel.empty()
 
-    // FASTQ_QC_PRE_MAPPING( input_sample_type.fastq )    
-    // ch_versions = ch_versions.mix( FASTQ_QC_PRE_MAPPING.out.versions )
+    ch_bam_types = input_sample_type.bam.branch{
+        dedup: it[1].toString() =~ /.*dedup.bam$/
+        other: true
+    }
 
-    FASTQ_ALIGN( input_sample_type.fastq )
-    ch_versions = ch_versions.mix( FASTQ_ALIGN.out.versions )
+    if ( params.run.fastq_qc_pre_mapping ) {
+        FASTQ_QC_PRE_MAPPING( input_sample_type.fastq )    
+        ch_versions = ch_versions.mix( FASTQ_QC_PRE_MAPPING.out.versions )
+    }
 
-    BAM_MARKDUPLICATES( FASTQ_ALIGN.out.bam )
-    ch_versions = ch_versions.mix( BAM_MARKDUPLICATES.out.versions )
+    if ( params.run.fastq_align ) {
+        FASTQ_ALIGN( input_sample_type.fastq )
+        ch_versions = ch_versions.mix( FASTQ_ALIGN.out.versions )
 
-    ch_bams = input_sample_type.bam
-        .mix( BAM_MARKDUPLICATES.out.bam )
-        .map{ meta, bam ,bai -> 
-            [[id: meta.id, sample_id: meta.sample_id, run_id: run_id],bam ,bai ]
-        }
+        ch_other_bams = ch_bam_types.other.mix( FASTQ_ALIGN.out.bam )
+    }
+    
+    if ( params.run.bam_markduplicates ) {
+        BAM_MARKDUPLICATES( ch_other_bams )
+        ch_versions = ch_versions.mix( BAM_MARKDUPLICATES.out.versions )
 
-    BAM_FINGERPRINT( ch_bams )
-    ch_versions = ch_versions.mix( BAM_FINGERPRINT.out.versions )
+        ch_bams = ch_bam_types.dedup
+            .mix( BAM_MARKDUPLICATES.out.bam)
+            .map{ meta, bam ,bai -> 
+                [[id: meta.id, sample_id: meta.sample_id, run_id: run_id], bam ,bai ]
+            }
+    } else {
+        ch_bams = ch_bam_types.dedup
+            .mix( ch_other_bams )
+            .map{ meta, bam ,bai -> 
+                [[id: meta.id, sample_id: meta.sample_id, run_id: run_id], bam ,bai ]
+            }
+    }
+
+    if ( params.run.bam_qc_post_mapping ) {
+        BAM_QC_POST_MAPPING( ch_bams )
+        ch_versions = ch_versions.mix( BAM_QC_POST_MAPPING.out.versions )
+    }
+
+    if ( params.run.bam_fingerprint ) {
+        BAM_FINGERPRINT( ch_bams )
+        ch_versions = ch_versions.mix( BAM_FINGERPRINT.out.versions )
+    }
+    
+    if ( params.run.germline_copy_number_discovery ) {
+        BAM_GERMLINE_COPY_NUMBER_DISCOVERY( ch_bams )
+        ch_versions = ch_versions.mix( BAM_GERMLINE_COPY_NUMBER_DISCOVERY.out.versions )
+    }
 
     if ( params.run.germline_short_variant_discovery ) {
         BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( ch_bams )
+        ch_versions = ch_versions.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.versions )
     }
 
-    CUSTOM_DUMPSOFTWAREVERSIONS(ch_versions.unique().collectFile(name: 'collated_versions.yml'))
-    version_yaml = CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect()
+    if ( params.run.germline_structural_variant_discovery ) {
+        BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY( ch_bams )
+        ch_versions = ch_versions.mix( BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
+    }
+    // CUSTOM_DUMPSOFTWAREVERSIONS(ch_versions.unique().collectFile(name: 'collated_versions.yml'))
+    // version_yaml = CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect()
 }
 
 def parseSampleSheet(csv_file) {
@@ -78,10 +120,7 @@ def parseSampleSheet(csv_file) {
             def sample_id = row.sample_id
             meta.sample_id = sample_id
             meta.run_id = run_id
-            meta.workflow = [:]
-            meta.workflow.name = null
-            meta.workflow.tool = null
-
+            
             // mapping with fastq
             if (row.fastq_2) {
                 def fastq_1 = file(row.fastq_1, checkIfExists: true)
@@ -99,6 +138,7 @@ def parseSampleSheet(csv_file) {
             if (row.bam) {
                 def bam = file(row.bam, checkIfExists: true)
                 meta.data_type = "bam"
+                meta.id = meta.sample_id
                 def bai = file(row.bai, checkIfExists: true)
                 return [ meta, bam, bai ]
             }
