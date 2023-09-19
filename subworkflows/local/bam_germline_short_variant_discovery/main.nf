@@ -65,6 +65,7 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY {
         ch_versions = ch_versions.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER.out.versions ) 
 
         ch_germline_vcfs = ch_germline_vcfs.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER.out.vcf.join( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER.out.tbi ) )
+        
         known_tool = true
       }
 

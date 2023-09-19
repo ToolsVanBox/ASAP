@@ -67,9 +67,6 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
     GATK4_GENOTYPEGVCFS( ch_combined_gvcfs, fasta, fai, dict, dbsnp, dbsnp_tbi )
     ch_versions = ch_versions.mix( GATK4_GENOTYPEGVCFS.out.versions )  
 
-    GATK4_GENOTYPEGVCFS.out.vcf.view()
-    GATK4_GENOTYPEGVCFS.out.tbi.view()
-
   emit:
     vcf = GATK4_GENOTYPEGVCFS.out.vcf // channel: [ meta, vcf ] 
     tbi = GATK4_GENOTYPEGVCFS.out.tbi // channel: [ meta, tbi ]
