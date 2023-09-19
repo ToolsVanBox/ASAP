@@ -14,6 +14,7 @@ process PICARD_CROSSCHECKFINGERPRINTS {
 
     output:
     tuple val(meta), path("*.crosscheck_metrics.txt"), emit: crosscheck_metrics
+    tuple val(meta), path("*.crosscheck_metrics_matrix.txt"), emit: crosscheck_metrics_matrix
     path "versions.yml"                              , emit: versions
 
     when:
@@ -41,6 +42,7 @@ process PICARD_CROSSCHECKFINGERPRINTS {
         --INPUT $input1_string \\
         $input2_string \\
         --HAPLOTYPE_MAP ${haplotype_map} \\
+        --MATRIX_OUTPUT ${prefix}.crosscheck_metrics_matrix.txt \\
         --OUTPUT ${prefix}.crosscheck_metrics.txt
 
     cat <<-END_VERSIONS > versions.yml

@@ -19,11 +19,11 @@ workflow BAM_FINGERPRINT {
 
       // Run Picard Fingerprint
       if ( tool == "picard" ) {
-          ch_bams_picard = ch_bams.map{ meta, bam, bai -> [ [ run_id:meta.run_id ], bam ] }.groupTuple()
+          ch_bams_picard = ch_bams.map{ meta, bam, bai -> [ [ id:meta.run_id ], bam ] }.groupTuple()
           
           BAM_FINGERPRINT_PICARD( ch_bams_picard, [], ch_haplotype )   
           ch_versions = ch_versions.mix( BAM_FINGERPRINT_PICARD.out.versions )  
-          
+                    
           known_tool = true
       }
 
