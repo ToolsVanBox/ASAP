@@ -1,5 +1,5 @@
 process GRIDSS {
-    tag "$meta.id"
+    // tag "${meta.id}"
     label 'process_medium'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -7,7 +7,9 @@ process GRIDSS {
         'biocontainers/gridss:2.13.2--h270b39a_0' }"
 
     input:
-    tuple val(meta), path(bam), path(bai)
+    tuple val(meta), path(gridss_bams)
+    tuple val(meta_bai), path(gridss_bai)
+    tuple val(meta_labels), val(gridss_labels)
     tuple val(meta2), path(bwa_index)
     path(fai)
     path(fasta_dict)
@@ -25,9 +27,16 @@ process GRIDSS {
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
+    def bams = gridss_bams.collect{"$it"}.join(' ')
+    def labels = gridss_labels.collect{"$it"}.join(',')
     def blacklist = blacklist ? "--blacklist ${blacklist}" : ""
     def gridss_properties = gridss_properties ? "--configuration ${gridss_properties}" : ""
-    def label = "--labels ${meta.id}" 
+    // def labels = meta.normal_sample_id ? "--labels ${meta.normal_sample_id}" : ""
+    // if ( labels == "" ) {
+    //     labels = meta.tumor_sample_id ? "--labels ${meta.tumor_sample_id}" : "--labels ${meta.id}" 
+    // } else {
+    //     labels = meta.tumor_sample_id ? labels+",${meta.tumor_sample_id}" : labels+"${meta.id}" 
+    // }
     def VERSION = '2.13.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """    
@@ -41,10 +50,10 @@ process GRIDSS {
         --assembly ${prefix}.assembly.bam \\
         --jvmheap ${task.memory.toGiga() - 1}g \\
         --otherjvmheap ${task.memory.toGiga() - 1}g \\
+        --labels ${labels} \\
         ${blacklist} \\
         ${gridss_properties} \\
-        ${label} \\
-        ${bam}
+        ${bams}
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -55,6 +64,7 @@ process GRIDSS {
     stub:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+    def meta = [ id: ${prefix} ]
     def VERSION = '2.13.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     def steps = args.contains("-s ") ? args.split('-s ')[-1].split(" ")[0] :
