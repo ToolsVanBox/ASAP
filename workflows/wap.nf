@@ -10,6 +10,8 @@ include { BAM_FINGERPRINT } from '../subworkflows/local/bam_fingerprint/main.nf'
 include { BAM_GERMLINE_SHORT_VARIANT_DISCOVERY } from '../subworkflows/local/bam_germline_short_variant_discovery/main.nf'
 include { BAM_GERMLINE_COPY_NUMBER_DISCOVERY } from '../subworkflows/local/bam_germline_copy_number_discovery/main.nf'
 include { BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY } from '../subworkflows/local/bam_germline_structural_variant_discovery/main.nf'
+include { BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY } from '../subworkflows/local/bam_somatic_structural_variant_discovery/main.nf'
+include { BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY } from '../subworkflows/local/bam_tumoronly_structural_variant_discovery/main.nf'
 
 // Include nf-core modules
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main.nf'
@@ -51,16 +53,24 @@ workflow WAP {
         ch_bams = ch_bam_types.dedup
             .mix( BAM_MARKDUPLICATES.out.bam)
             .map{ meta, bam ,bai -> 
-                [[id: meta.id, sample_id: meta.sample_id, run_id: run_id], bam ,bai ]
+                [[id: meta.id, sample_id: meta.sample_id, run_id: run_id, sample_type: meta.sample_type], bam ,bai ]
             }
     } else {
         ch_bams = ch_bam_types.dedup
             .mix( ch_other_bams )
             .map{ meta, bam ,bai -> 
-                [[id: meta.id, sample_id: meta.sample_id, run_id: run_id], bam ,bai ]
+                [[id: meta.id, sample_id: meta.sample_id, run_id: run_id, sample_type: meta.sample_type], bam ,bai ]
             }
     }
 
+    ch_bams_sample_type = ch_bams.branch{
+        normal: it[0].sample_type == "normal"
+        tumor: it[0].sample_type == "tumor"
+    }
+
+    ch_bams_tumor_normal = ch_bams_sample_type.tumor
+            .combine( ch_bams_sample_type.normal.ifEmpty( [ [], null, null ] ) )
+    
     if ( params.run.bam_qc_post_mapping ) {
         BAM_QC_POST_MAPPING( ch_bams )
         ch_versions = ch_versions.mix( BAM_QC_POST_MAPPING.out.versions )
@@ -71,20 +81,32 @@ workflow WAP {
         ch_versions = ch_versions.mix( BAM_FINGERPRINT.out.versions )
     }
     
-    if ( params.run.germline_copy_number_discovery ) {
+    if ( params.run.bam_germline_copy_number_discovery ) {
         BAM_GERMLINE_COPY_NUMBER_DISCOVERY( ch_bams )
         ch_versions = ch_versions.mix( BAM_GERMLINE_COPY_NUMBER_DISCOVERY.out.versions )
     }
 
-    if ( params.run.germline_short_variant_discovery ) {
+    if ( params.run.bam_germline_short_variant_discovery ) {
         BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( ch_bams )
         ch_versions = ch_versions.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.versions )
     }
 
-    if ( params.run.germline_structural_variant_discovery ) {
+    if ( params.run.bam_germline_structural_variant_discovery ) {
         BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY( ch_bams )
         ch_versions = ch_versions.mix( BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
     }
+
+    if ( params.run.bam_somatic_structural_variant_discovery ) {                    
+        BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY( ch_bams )
+        ch_versions = ch_versions.mix( BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
+    }
+
+    if ( params.run.bam_tumoronly_structural_variant_discovery ) {                    
+        BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY( ch_bams )
+        ch_versions = ch_versions.mix( BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
+    }
+
+    
     // CUSTOM_DUMPSOFTWAREVERSIONS(ch_versions.unique().collectFile(name: 'collated_versions.yml'))
     // version_yaml = CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect()
 }
@@ -120,7 +142,12 @@ def parseSampleSheet(csv_file) {
             def sample_id = row.sample_id
             meta.sample_id = sample_id
             meta.run_id = run_id
-            
+            def sample_type = 'tumor'
+            if (row.sample_type) {
+                sample_type = row.sample_type
+            }
+            meta.sample_type = sample_type
+
             // mapping with fastq
             if (row.fastq_2) {
                 def fastq_1 = file(row.fastq_1, checkIfExists: true)
