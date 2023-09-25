@@ -32,8 +32,9 @@ process HMFTOOLS_LINX {
     task.ext.when == null || task.ext.when
 
     script:
-    def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
+    def sample_id = meta.tumor_sample_id ?: meta.id
+    def prefix = task.ext.prefix ?: "${sample_id}"
     def driver_gene_panel = driver_gene_panel ? "-driver_gene_panel ${driver_gene_panel}" : ""
     def known_fusion_file = known_fusion_file ? "-known_fusion_file ${known_fusion_file}" : ""
     def VERSION = '1.23.6' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
@@ -58,7 +59,8 @@ process HMFTOOLS_LINX {
 
     stub:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def sample_id = meta.tumor_sample_id ?: meta.id
+    def prefix = task.ext.prefix ?: "${sample_id}"
     def VERSION = '1.23.6' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     """
