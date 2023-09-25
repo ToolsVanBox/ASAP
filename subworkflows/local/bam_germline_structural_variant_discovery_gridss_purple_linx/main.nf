@@ -1,15 +1,13 @@
 //
-// BAM GERMLINE SHORT VARIANT DISCOVERY
+// BAM GERMLINE STRUCTURAL VARIANT DISCOVERY WITH GRIDSS PURPLE LINX
 
 // Include local modules
-include { GRIDSS } from '../../../modules/local/gridss/gridss/main'
-include { GRIDSS_ANNOTATEINSERTEDSEQUENCE } from '../../../modules/local/gridss/annotateinsertedsequence/main'
-include { HMFTOOLS_GRIPSS } from '../../../modules/local/hmftools/gripss/main'
-include { HMFTOOLS_AMBER } from '../../../modules/local/hmftools/amber/main'
-include { HMFTOOLS_COBALT } from '../../../modules/local/hmftools/cobalt/main'
-include { HMFTOOLS_PURPLE } from '../../../modules/local/hmftools/purple/main'
-include { HMFTOOLS_LINX } from '../../../modules/local/hmftools/linx/linx/main'
-include { HMFTOOLS_LINX_SVVISUALISER } from '../../../modules/local/hmftools/linx/svvisualiser/main'
+include { GRIDSS as GRIDSS_GERMLINE } from '../../../modules/local/gridss/gridss/main'
+include { GRIDSS_ANNOTATEINSERTEDSEQUENCE as GRIDSS_ANNOTATEINSERTEDSEQUENCE_GERMLINE } from '../../../modules/local/gridss/annotateinsertedsequence/main'
+include { HMFTOOLS_GRIPSS_GERMLINE } from '../../../modules/local/hmftools/gripss/germline/main'
+include { HMFTOOLS_AMBER_GERMLINE } from '../../../modules/local/hmftools/amber/germline/main'
+include { HMFTOOLS_COBALT_GERMLINE } from '../../../modules/local/hmftools/cobalt/germline/main'
+include { HMFTOOLS_PURPLE_GERMLINE } from '../../../modules/local/hmftools/purple/germline/main'
 
 // Include nf-core modules
 
@@ -41,6 +39,8 @@ workflow BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY_GRIDSS_PURPLE_LINX {
     def driver_gene_panel = file( params.genomes[params.genome].purple_driver_gene_panel, checkIfExists: true )
     def ensembl_data_dir = file( params.genomes[params.genome].purple_ensembl_data_dir, checkIfExists: true )
     def somatic_hotspots = file( params.genomes[params.genome].purple_somatic_hotspots, checkIfExists: true )
+    def germline_hotspots = file( params.genomes[params.genome].purple_germline_hotspots, checkIfExists: true )
+    def del_freq_file = file( params.genomes[params.genome].purple_del_freq_file, checkIfExists: true )
 
     def known_fusion_file = file( params.genomes[params.genome].linx_known_fusion_file, checkIfExists: true )
 
@@ -50,67 +50,72 @@ workflow BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY_GRIDSS_PURPLE_LINX {
     ch_viralreference_index = Channel.value( file("${params.genomes[params.genome].gridss_viralreference}/*") )
               .map{ viralreference_index -> [ [ id:'index' ], viralreference_index ] }
 
-    GRIDSS( ch_bams, ch_bwa_index, fai, fasta_dict, blacklist, gridss_properties )
-    ch_versions = ch_versions.mix( GRIDSS.out.versions )
+    ch_gridss_bam = ch_bams.map{ meta, bam, bai -> [ [ id: meta.run_id ], bam ] }.groupTuple()
+    ch_gridss_bai = ch_bams.map{ meta, bam, bai -> [ [ id: meta.run_id ], bai ] }.groupTuple()
+    ch_gridss_labels = ch_bams.map{ meta, bam, bai -> [ [ id: meta.run_id ], meta.sample_id ] }.groupTuple()
+    
+    GRIDSS_GERMLINE( ch_gridss_bam, ch_gridss_bai, ch_gridss_labels, ch_bwa_index, fai, fasta_dict, blacklist, gridss_properties )
+    ch_versions = ch_versions.mix( GRIDSS_GERMLINE.out.versions )
 
-    ch_gridss_driver_vcfs = GRIDSS.out.gridss_driver_vcf
-    GRIDSS_ANNOTATEINSERTEDSEQUENCE( ch_gridss_driver_vcfs, ch_viralreference_index, repeatmaskerbed )
-    ch_versions = ch_versions.mix( GRIDSS_ANNOTATEINSERTEDSEQUENCE.out.versions )
+    ch_gridss_driver_vcfs = GRIDSS_GERMLINE.out.gridss_driver_vcf
+    GRIDSS_ANNOTATEINSERTEDSEQUENCE_GERMLINE( ch_gridss_driver_vcfs, ch_viralreference_index, repeatmaskerbed )
+    ch_versions = ch_versions.mix( GRIDSS_ANNOTATEINSERTEDSEQUENCE_GERMLINE.out.versions )
 
-    ch_gridss_unfiltered_vcfs = GRIDSS_ANNOTATEINSERTEDSEQUENCE.out.gridss_unfiltered_vcf
-    HMFTOOLS_GRIPSS( ch_gridss_unfiltered_vcfs, ch_bwa_index, fai, known_hotspot_file, pon_sgl_file, pon_sv_file, repeat_mask_file )
-    ch_versions = ch_versions.mix( HMFTOOLS_GRIPSS.out.versions )
+    ch_gridss_unfiltered_vcfs = GRIDSS_ANNOTATEINSERTEDSEQUENCE_GERMLINE.out.gridss_unfiltered_vcf
+    
+    ch_bams_sample_type = ch_bams.branch{
+        normal: it[0].sample_type == "normal"
+        tumor: it[0].sample_type == "tumor"
+    }
 
-    HMFTOOLS_AMBER( ch_bams, fasta, bafsnps )
-    ch_versions = ch_versions.mix( HMFTOOLS_AMBER.out.versions )
+    ch_bams_tumor_normal = ch_bams_sample_type.tumor
+            .combine( ch_bams_sample_type.normal.ifEmpty( [ [], null, null ] ) )
+    
+    ch_bams_normal = ch_bams_tumor_normal
+            .map{ tumor_meta, tumor_bam, tumor_bai, normal_meta, normal_bam, normal_bai ->
+                if ( normal_bam == null ) { error("Need a normal sample for germline calling") }
+                [ [ id: normal_meta.id, run_id: normal_meta.run_id ], normal_bam, normal_bai ]
+            }
+    
+    ch_gripss_germline = ch_gridss_unfiltered_vcfs.combine( ch_bams_normal )
+      .map{ meta, gridss_unfiltered_vcf, meta2, normal_bam, normal_bai ->
+        [ meta2, gridss_unfiltered_vcf ]
+       }
 
-    HMFTOOLS_COBALT( ch_bams, fasta, gc_profile, tumor_only_diploid_bed )
-    ch_versions = ch_versions.mix( HMFTOOLS_COBALT.out.versions )
+    HMFTOOLS_GRIPSS_GERMLINE( ch_gripss_germline, ch_bwa_index, fai, known_hotspot_file, pon_sgl_file, pon_sv_file, repeat_mask_file )
+    ch_versions = ch_versions.mix( HMFTOOLS_GRIPSS_GERMLINE.out.versions )
+        
+    HMFTOOLS_AMBER_GERMLINE( ch_bams_normal, fasta, bafsnps )
+    ch_versions = ch_versions.mix( HMFTOOLS_AMBER_GERMLINE.out.versions )
 
-    amber = HMFTOOLS_AMBER.out.amber_baf_pcf
+    HMFTOOLS_COBALT_GERMLINE( ch_bams_normal, fasta, gc_profile )
+    ch_versions = ch_versions.mix( HMFTOOLS_COBALT_GERMLINE.out.versions )
+
+    amber_dir = HMFTOOLS_AMBER_GERMLINE.out.amber_baf_tsv_gz
       .map{ meta, amber_file ->
         amber_dir = amber_file.getParent()
         [ meta, amber_dir ]
       }
     
-    cobalt = HMFTOOLS_COBALT.out.cobalt_gc_median_tsv
+    cobalt_dir = HMFTOOLS_COBALT_GERMLINE.out.cobalt_gc_median_tsv
       .map{ meta, cobalt_file ->
         cobalt_dir = cobalt_file.getParent()
         [ meta, cobalt_dir ]
       }
     
-    ch_gripss_vcf = HMFTOOLS_GRIPSS.out.gripss_vcf
-      .join( HMFTOOLS_GRIPSS.out.gripss_vcf_tbi )
+    ch_gripss_vcf = HMFTOOLS_GRIPSS_GERMLINE.out.gripss_vcf
+      .join( HMFTOOLS_GRIPSS_GERMLINE.out.gripss_vcf_tbi )
     
-    ch_gripss_filtered_vcf = HMFTOOLS_GRIPSS.out.gripss_filtered_vcf
-      .join( HMFTOOLS_GRIPSS.out.gripss_filtered_vcf_tbi )
-
+    ch_gripss_filtered_vcf = HMFTOOLS_GRIPSS_GERMLINE.out.gripss_filtered_vcf
+      .join( HMFTOOLS_GRIPSS_GERMLINE.out.gripss_filtered_vcf_tbi )
+    
     ch_purple = ch_gripss_vcf
       .join( ch_gripss_filtered_vcf )
-      .join( amber )
-      .join( cobalt )
+      .join( amber_dir )
+      .join( cobalt_dir )
 
-    HMFTOOLS_PURPLE( ch_purple, fasta, fai, fasta_dict, gc_profile, driver_gene_panel, somatic_hotspots, ensembl_data_dir )
-    ch_versions = ch_versions.mix( HMFTOOLS_PURPLE.out.versions )
-    
-    ch_linx = HMFTOOLS_PURPLE.out.purple_sv_vcf
-      .join( HMFTOOLS_PURPLE.out.purple_sv_vcf_tbi )
-      .map{ meta, purple_vcf, purple_vcf_tbi ->
-        purple_dir = purple_vcf.getParent()
-        [ meta, purple_vcf, purple_vcf_tbi, purple_dir]
-      }
-
-    HMFTOOLS_LINX( ch_linx, ensembl_data_dir, driver_gene_panel, known_fusion_file )
-    ch_versions = ch_versions.mix( HMFTOOLS_LINX.out.versions )
-
-    linx = HMFTOOLS_LINX.out.linx_vis_copy_number_tsv
-      .map{ meta, linx_file -> 
-        linx_dir = linx_file.getParent()
-        [ meta, linx_dir ]
-      }
-
-    HMFTOOLS_LINX_SVVISUALISER( linx, ensembl_data_dir )
-    ch_versions = ch_versions.mix( HMFTOOLS_LINX_SVVISUALISER.out.versions )
+    HMFTOOLS_PURPLE_GERMLINE( ch_purple, fasta, fai, fasta_dict, gc_profile, driver_gene_panel, germline_hotspots, del_freq_file, ensembl_data_dir )
+    ch_versions = ch_versions.mix( HMFTOOLS_PURPLE_GERMLINE.out.versions )
 
   emit:
     versions = ch_versions // channel: [ versions.yml ]
