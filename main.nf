@@ -1,8 +1,8 @@
 
 nextflow.enable.dsl=2
 
-include { WAP } from './workflows/wap.nf'
+include { ASAP } from './workflows/asap.nf'
 
 workflow {
-    WAP()
+    ASAP()
 }
