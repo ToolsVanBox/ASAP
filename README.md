@@ -1,2 +1,2 @@
-# WAP
-WGS Analysis Pipeline
+# ASAP
+Another Sequencing Analysis Pipeline
