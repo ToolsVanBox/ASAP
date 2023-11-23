@@ -1,4 +1,4 @@
-process GATK4_COMBINEGVCFS {
+process GATK4_CALCULATECONTAMINATION {
     tag "$meta.id"
     label 'process_low'
 
@@ -8,15 +8,12 @@ process GATK4_COMBINEGVCFS {
         'biocontainers/gatk4:4.4.0.0--py36hdfd78af_0' }"
 
     input:
-    tuple val(meta), path(vcf), path(vcf_idx)
-    path  fasta
-    path  fai
-    path  dict
+    tuple val(meta), path(pileup), path(matched)
 
     output:
-    tuple val(meta), path("*.combined.g.vcf.gz"), emit: combined_gvcf
-    tuple val(meta), path("*.combined.g.vcf.gz.tbi"), emit: combined_tbi
-    path "versions.yml"                         , emit: versions
+    tuple val(meta), path('*.contamination.table'), emit: contamination
+    tuple val(meta), path('*.segmentation.table') , emit: segmentation, optional:true
+    path "versions.yml"                           , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -24,19 +21,19 @@ process GATK4_COMBINEGVCFS {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def input_list = vcf.collect{"--variant $it"}.join(' ')
+    def matched_command = matched ? "--matched-normal $matched" : ''
 
     def avail_mem = 3072
     if (!task.memory) {
-        log.info '[GATK COMBINEGVCFS] Available memory not known - defaulting to 3GB. Specify process memory requirements to change this.'
+        log.info '[GATK CalculateContamination] Available memory not known - defaulting to 3GB. Specify process memory requirements to change this.'
     } else {
         avail_mem = (task.memory.mega*0.8).intValue()
     }
     """
-    gatk --java-options "-Xmx${avail_mem}M -XX:-UsePerfData" CombineGVCFs \\
-        $input_list \\
-        --output ${prefix}.combined.g.vcf.gz \\
-        --reference ${fasta} \\
+    gatk --java-options "-Xmx${avail_mem}M -XX:-UsePerfData" CalculateContamination \\
+        --input $pileup \\
+        --output ${prefix}.contamination.table \\
+        $matched_command \\
         --tmp-dir . \\
         $args
 
