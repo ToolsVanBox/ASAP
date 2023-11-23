@@ -27,7 +27,8 @@ process HMFTOOLS_GRIPSS_GERMLINE {
 
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def reference = meta.id
+    def reference = meta.tumor_sample_id
+    def sample = meta.normal_sample_id
     def args = task.ext.args ?: ''
     def known_hotspot_file = known_hotspot_file ? "-known_hotspot_file ${known_hotspot_file}" : ""
     def pon_sgl_file = pon_sgl_file ? "-pon_sgl_file ${pon_sgl_file}" : ""
@@ -47,7 +48,8 @@ process HMFTOOLS_GRIPSS_GERMLINE {
 		${pon_sv_file} \\
         ${repeat_mask_file} \\
 		-vcf ${gridss_unfiltered_vcf} \\
-		-sample ${reference} \\
+		-sample ${sample} \\
+        -reference ${reference} \\
         -germline \\
         -output_dir ./
     

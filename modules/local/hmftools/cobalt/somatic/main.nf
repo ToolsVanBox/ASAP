@@ -7,7 +7,7 @@ process HMFTOOLS_COBALT_SOMATIC {
         'biocontainers/hmftools-cobalt:1.13--hdfd78af_1' }"
 
     input:
-    tuple val(meta), path(tumor_bam), path(tumor_bai), path(normal_bam), path(normal_bai)
+    tuple val(meta), path(normal_bam), path(normal_bai), path(tumor_bam), path(tumor_bai)
     path(fasta)
     path(gc_profile)
     
