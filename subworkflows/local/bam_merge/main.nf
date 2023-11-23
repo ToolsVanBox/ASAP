@@ -15,29 +15,55 @@ workflow BAM_MERGE {
     ch_fai         // channel (optional) : [ val(meta3), path(fai) ]
     
     main:
-    ch_versions = Channel.empty()
-    
-    // Convert input tools to UpperCase
-    bam_merge_tools = params.bam_merge.tool.toString().toUpperCase()
-    
-    if ( bam_merge_tools == "SAMTOOLS" | bam_merge_tools.contains("SAMTOOLS") ) {
-        // Merge bam file with samtools
-        SAMTOOLS_MERGE ( ch_bams, ch_fasta, ch_fai )
-        ch_versions = ch_versions.mix(SAMTOOLS_MERGE.out.versions.first())
-    } 
-    
-    // Sort, index BAM file and run samtools stats, flagstat and idxstats    
+        ch_versions = Channel.empty()
+        ch_merged_bam = Channel.empty()
+        ch_merged_bai = Channel.empty()
+        ch_merged_csi = Channel.empty()
+        ch_merged_stats = Channel.empty()
+        ch_merged_flagstat = Channel.empty()
+        ch_merged_idxstats = Channel.empty()
+            
+        for ( tool in params.bam_merge.tool ) {
+            tool = tool.toLowerCase()      
+            def known_tool = false    
 
-    BAM_SORT_STATS_SAMTOOLS ( SAMTOOLS_MERGE.out.bam, ch_fasta )
-    ch_versions = ch_versions.mix(BAM_SORT_STATS_SAMTOOLS.out.versions)
+            if ( tool == "samtools" ) {
+                ch_bams_samtools = ch_bams
+                     .map{ meta, bam ->              
+                        meta = meta + [ merge: "samtools" ]
+                        meta.id = meta.id+".samtools"
+                        [ meta, bam ]
+                    }
+                // Run Samtools merge
+                SAMTOOLS_MERGE ( ch_bams_samtools, ch_fasta, ch_fai )
+                ch_versions = ch_versions.mix(SAMTOOLS_MERGE.out.versions.first())
+
+                // Sort, index BAM file and run samtools stats, flagstat and idxstats    
+                BAM_SORT_STATS_SAMTOOLS ( SAMTOOLS_MERGE.out.bam, ch_fasta )
+                ch_versions = ch_versions.mix(BAM_SORT_STATS_SAMTOOLS.out.versions)
+
+                ch_merged_bam = ch_merged_bam.mix( BAM_SORT_STATS_SAMTOOLS.out.bam )
+                ch_merged_bai = ch_merged_bai.mix( BAM_SORT_STATS_SAMTOOLS.out.bai )
+                ch_merged_csi = ch_merged_csi.mix( BAM_SORT_STATS_SAMTOOLS.out.csi )
+                ch_merged_stats = ch_merged_stats.mix( BAM_SORT_STATS_SAMTOOLS.out.stats )
+                ch_merged_flagstat = ch_merged_flagstat.mix( BAM_SORT_STATS_SAMTOOLS.out.flagstat )
+                ch_merged_idxstats = ch_merged_idxstats.mix( BAM_SORT_STATS_SAMTOOLS.out.idxstats )
+
+                known_tool = true
+            }
+
+            if ( ! known_tool ) {
+                println ("WARNING: Skip ${tool}, because it's not known as a merge bam tool, this tool is not build in (yet).")
+            }
+        }
 
     emit:
-    bam      = BAM_SORT_STATS_SAMTOOLS.out.bam      // channel: [ val(meta), path(bam) ]
-    bai      = BAM_SORT_STATS_SAMTOOLS.out.bai      // channel: [ val(meta), path(bai) ]
-    csi      = BAM_SORT_STATS_SAMTOOLS.out.csi      // channel: [ val(meta), path(csi) ]
-    stats    = BAM_SORT_STATS_SAMTOOLS.out.stats    // channel: [ val(meta), path(stats) ]
-    flagstat = BAM_SORT_STATS_SAMTOOLS.out.flagstat // channel: [ val(meta), path(flagstat) ]
-    idxstats = BAM_SORT_STATS_SAMTOOLS.out.idxstats // channel: [ val(meta), path(idxstats) ]
+        bam      = ch_merged_bam      // channel: [ val(meta), path(bam) ]
+        bai      = ch_merged_bai      // channel: [ val(meta), path(bai) ]
+        csi      = ch_merged_csi      // channel: [ val(meta), path(csi) ]
+        stats    = ch_merged_stats    // channel: [ val(meta), path(stats) ]
+        flagstat = ch_merged_flagstat // channel: [ val(meta), path(flagstat) ]
+        idxstats = ch_merged_idxstats // channel: [ val(meta), path(idxstats) ]
 
-    versions = ch_versions                          // channel: [ path(versions.yml) ]
+        versions = ch_versions                          // channel: [ path(versions.yml) ]
 }

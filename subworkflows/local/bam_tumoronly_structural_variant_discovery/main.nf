@@ -2,14 +2,16 @@
 // BAM TUMOR ONLY STRUCTURAL VARIANT DISCOVERY
 
 // Include local subworkflows
-include { BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY_GRIDSS_PURPLE_LINX } from '../../../subworkflows/local/bam_tumoronly_structural_variant_discovery_gridss_purple_linx/main'
 include { BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY_MANTA } from '../../../subworkflows/local/bam_tumoronly_structural_variant_discovery_manta/main'
 
 // Include nf-core modules
 
 workflow BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY {
   take:
-    ch_bams  // channel: [ meta, path(bam), path(bai) ]
+    ch_bam_bai_tumor  // channel: [ meta, path(bam), path(bai) ]
+    ch_fasta // channel: [ val(meta), path(fasta) ]
+    ch_fai // channel: [ val(meta), path(fai) ]
+
   main:
     ch_versions = Channel.empty()
 
@@ -17,15 +19,8 @@ workflow BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY {
       tool = tool.toLowerCase()      
       known_tool = false   
       
-      if ( tool == "gridss_purple_linx" ) {
-        BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY_GRIDSS_PURPLE_LINX( ch_bams )
-        ch_versions = ch_versions.mix( BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY_GRIDSS_PURPLE_LINX.out.versions )
-      
-        known_tool = true
-      }
-
       if ( tool == "manta" ) {
-        BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY_MANTA( ch_bams )
+        BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY_MANTA( ch_bam_bai_tumor, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix( BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY_MANTA.out.versions )
       
         known_tool = true

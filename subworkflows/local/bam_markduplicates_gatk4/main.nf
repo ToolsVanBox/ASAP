@@ -11,14 +11,14 @@ include { BAM_STATS_SAMTOOLS    } from '../../../subworkflows/nf-core/bam_stats_
 workflow BAM_MARKDUPLICATES_GATK4 {
   take:
     ch_bams   // channel: [ val(meta), path(bam) ]
-    fasta // path(fasta)
-    fai // path(fai)
+    ch_fasta // channel: [ val(metae), path(fasta) ]
+    ch_fai // channel: [ val(meta), path(fai) ]
 
   main:
     ch_versions = Channel.empty()
-    
-    ch_fasta = Channel.value( fasta )
-      .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] } 
+
+    fasta = ch_fasta.map{ meta, fasta -> [ fasta ] }
+    fai = ch_fai.map{ meta, fai -> [ fai ] }
 
     GATK4_MARKDUPLICATES( ch_bams, fasta, fai )
     ch_versions = ch_versions.mix(GATK4_MARKDUPLICATES.out.versions)

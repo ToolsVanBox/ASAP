@@ -7,12 +7,12 @@ include { MANTA_GERMLINE  } from '../../../modules/nf-core/manta/germline/main'
 
 workflow BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY_MANTA {
     take:
-      ch_bams       // channel: [ meta, bam, bai ]
+      ch_bam_bai       // channel: [ meta, bam, bai ]
     
     main:
       ch_versions = Channel.empty()
 
-      ch_manta = ch_bams
+      ch_manta = ch_bam_bai
         .map{ meta, bam, bai ->
           [ [id: meta.run_id ], bam, bai ]
         }
@@ -31,7 +31,7 @@ workflow BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY_MANTA {
 
       MANTA_GERMLINE( ch_manta, ch_fasta, ch_fai )
       ch_versions = ch_versions.mix( MANTA_GERMLINE.out.versions )
-    
+
     emit:
       versions = ch_versions // channel: [ versions.yml ]
 

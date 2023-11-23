@@ -10,61 +10,50 @@ include { GATK4_SPLITINTERVALS } from '../../../modules/nf-core/gatk4/splitinter
 
 workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY {
   take:
-    ch_bams  // channel: [ meta, path(bam), path(bai) ]
+    ch_bam_bai  // channel: [ meta, path(bam), path(bai) ]
+    ch_intervals // channel: [ val(meta), path(interval_list) ]
+    ch_fasta // channel: [ val(meta), path(fasta) ]
+    ch_fai // channel: [ val(meta), path(fai) ]
+    ch_dict // channel: [ val(meta), path(dict) ]
+
   main:
      ch_versions = Channel.empty()
      ch_germline_vcfs = Channel.empty()
+     ch_germline_tbi = Channel.empty()
       
     for ( tool in params.bam_germline_short_variant_discovery.tool ) {
       tool = tool.toLowerCase()      
       known_tool = false    
 
       if ( tool == "gatk4haplotypecaller" ) {
-    
-        def interval_list = file( params.genomes[params.genome].interval_list, checkIfExists: true )
-        def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
-        def fai = file( fasta.toString()+".fai", checkIfExists: true )
-        def dict = file( fasta.toString().replace(".fasta",".dict"), checkIfExists: true )
-
-        ch_intervals = Channel.value( interval_list )
-          .map{ genome_interval -> [ [ id:'intervals' ], genome_interval ] }    
-        ch_fasta = Channel.value( fasta )
-          .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
-        ch_fai = Channel.value( fai )
-          .map{ genome_fai -> [ [ id:'fai' ], genome_fai ] }
-        ch_dict = Channel.value( dict )
-          .map{ genome_dict -> [ [ id:'dict' ], genome_dict ] }
-
-        GATK4_SPLITINTERVALS( ch_intervals, ch_fasta, ch_fai, ch_dict )
-        ch_versions = ch_versions.mix( GATK4_SPLITINTERVALS.out.versions )  
-
-        ch_split_intervals = GATK4_SPLITINTERVALS.out.split_intervals
-          .map{ meta, intervals -> [ intervals ]}
-          .flatten()
-                
-        ch_bam_interval = ch_bams
-          .combine( ch_split_intervals )
-          .map{ meta, bam, bai, interval_file -> 
-              m = interval_file =~ /(\d+)-scattered.interval_list/
-              def interval = m[0][1]
-              [ meta + [id: meta.id+"."+interval ], bam, bai, interval_file ]
+                       
+        ch_bam_bai_interval = ch_bam_bai
+          .combine( ch_intervals )
+          .map{ meta, bam, bai, meta2, interval_file -> 
+              meta = meta + [ calling_type: "germline" ] 
+              meta = meta + [ short_variant_caller: "gatk4haplotypecaller" ]
+              meta = meta + [ interval: meta2.id ] 
+              meta.id = meta.id+".germline.gatk4haplotypecaller."+meta2.id
+              [ meta, bam, bai, interval_file ]
             }
 
-        BAM_BASE_RECALIBRATION_GATK4( ch_bam_interval, fasta, fai, dict )
+        BAM_BASE_RECALIBRATION_GATK4( ch_bam_bai_interval, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_BASE_RECALIBRATION_GATK4.out.versions ) 
         
-        ch_bam_bqsr_interval = BAM_BASE_RECALIBRATION_GATK4.out.bam
-          .combine( ch_split_intervals )
-          .map{ meta, bam, bai, interval_file -> 
-              m = interval_file =~ /(\d+)-scattered.interval_list/
-              def interval = m[0][1]
-              [ meta + [id: meta.id+"."+interval ], bam, bai, interval_file, [] ]
+        ch_bam_bai_interval_bqsr = BAM_BASE_RECALIBRATION_GATK4.out.bam
+          .join( BAM_BASE_RECALIBRATION_GATK4.out.bai )
+          .combine( ch_intervals )
+          .map{ meta, bam, bai, meta2, interval_file ->
+              meta = meta + [ interval: meta2.id ] 
+              meta.id = meta.id+".germline.gatk4haplotypecaller."+meta2.id
+              [ meta, bam, bai, interval_file, [] ]
             }
-            
-        BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER( ch_bam_bqsr_interval, fasta, fai, dict )
+
+        BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER( ch_bam_bai_interval_bqsr, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER.out.versions ) 
 
-        ch_germline_vcfs = ch_germline_vcfs.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER.out.vcf.join( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER.out.tbi ) )
+        ch_germline_vcfs = ch_germline_vcfs.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER.out.vcf )
+        ch_germline_tbi = ch_germline_tbi.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER.out.tbi )
         
         known_tool = true
       }
@@ -74,7 +63,8 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY {
       }
     }
   emit:
-    vcf = ch_germline_vcfs // channel: [ meta, vcf, tbi ]
+    vcf = ch_germline_vcfs // channel: [ meta, vcf ]
+    tbi = ch_germline_tbi // channel: [ meta, tbi ]
     versions = ch_versions // channel: [ versions.yml ]
 }
 

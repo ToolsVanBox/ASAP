@@ -11,12 +11,12 @@ include { SAMTOOLS_INDEX        } from '../../../modules/nf-core/samtools/index/
 workflow BAM_MARKDUPLICATES_SAMTOOLS {
   take:
     ch_bams   // channel: [ val(meta), path(bam) ]
-    fasta // path(fasta)
+    ch_fasta // channel: [ val(meta), path(fasta) ]
     
   main:
     ch_versions = Channel.empty()
-    ch_fasta = Channel.value( fasta )
-      .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
+    
+    fasta = ch_fasta.map{ meta, fasta -> [ fasta ] }
     
     BAM_MARKDUPLICATES_SAMTOOLS_NFCORE( ch_bams, fasta )
     ch_versions = ch_versions.mix(BAM_MARKDUPLICATES_SAMTOOLS_NFCORE.out.versions)

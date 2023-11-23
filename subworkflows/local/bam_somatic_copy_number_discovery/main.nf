@@ -1,14 +1,15 @@
 //
-// BAM GERMLINE SHORT VARIANT DISCOVERY
+// BAM SOMATIC SHORT VARIANT DISCOVERY
 
 // Include local subworkflows
-include { BAM_GERMLINE_COPY_NUMBER_DISCOVERY_CONTROLFREEC } from '../../../subworkflows/local/bam_germline_copy_number_discovery_controlfreec/main'
+include { BAM_SOMATIC_COPY_NUMBER_DISCOVERY_CONTROLFREEC } from '../../../subworkflows/local/bam_somatic_copy_number_discovery_controlfreec/main'
 
 // Include nf-core modules
 
-workflow BAM_GERMLINE_COPY_NUMBER_DISCOVERY {
+workflow BAM_SOMATIC_COPY_NUMBER_DISCOVERY {
   take:
-    ch_bam_bai  // channel: [ meta, path(bam), path(bai) ]
+    ch_bam_bai_normal  // channel: [ meta, path(normal_bam), path(normal_bai) ]
+    ch_bam_bai_tumor // channel: [ meta,  path(tumor_bam), path(tumor_bai) ]    
     ch_fasta // channel: [ val(meta), path(fasta) ]
   main:
     ch_versions = Channel.empty()
@@ -35,14 +36,14 @@ workflow BAM_GERMLINE_COPY_NUMBER_DISCOVERY {
 
       if ( tool == "controlfreec" ) {
         
-        BAM_GERMLINE_COPY_NUMBER_DISCOVERY_CONTROLFREEC( ch_bam_bai, ch_fasta, dbsnp, dbsnp_tbi )
-        ch_versions = ch_versions.mix( BAM_GERMLINE_COPY_NUMBER_DISCOVERY_CONTROLFREEC.out.versions )
+        BAM_SOMATIC_COPY_NUMBER_DISCOVERY_CONTROLFREEC( ch_bam_bai_normal, ch_bam_bai_tumor, ch_fasta, dbsnp, dbsnp_tbi )
+        ch_versions = ch_versions.mix( BAM_SOMATIC_COPY_NUMBER_DISCOVERY_CONTROLFREEC.out.versions )
       
         known_tool = true
       }
 
       if ( ! known_tool ) {
-       println ("WARNING: Skip ${tool}, because it's not known as a bam germline short variant discovery tool, this tool is not build in (yet).")
+       println ("WARNING: Skip ${tool}, because it's not known as a bam somatic short variant discovery tool, this tool is not build in (yet).")
       }
     }
   emit:

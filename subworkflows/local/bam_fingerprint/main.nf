@@ -6,7 +6,7 @@ include { BAM_FINGERPRINT_PICARD } from '../../../subworkflows/local/bam_fingerp
 
 workflow BAM_FINGERPRINT {
   take:
-    ch_bams // channel: [ meta, path(bam), path(bai) ] 
+    ch_bam_bai // channel: [ meta, path(bam), path(bai) ] 
   main:
     ch_versions = Channel.empty() 
     
@@ -19,9 +19,9 @@ workflow BAM_FINGERPRINT {
 
       // Run Picard Fingerprint
       if ( tool == "picard" ) {
-          ch_bams_picard = ch_bams.map{ meta, bam, bai -> [ [ id:meta.run_id ], bam ] }.groupTuple()
-          
-          BAM_FINGERPRINT_PICARD( ch_bams_picard, [], ch_haplotype )   
+          ch_bam_bai_picard = ch_bam_bai.map{ meta, bam, bai -> [ [ id:meta.run_id ], bam ] }.groupTuple()
+
+          BAM_FINGERPRINT_PICARD( ch_bam_bai_picard, [], ch_haplotype )   
           ch_versions = ch_versions.mix( BAM_FINGERPRINT_PICARD.out.versions )  
                     
           known_tool = true

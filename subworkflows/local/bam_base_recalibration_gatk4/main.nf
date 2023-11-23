@@ -11,17 +11,18 @@ include { BAM_MERGE } from '../../../subworkflows/local/bam_merge/main.nf'
 workflow BAM_BASE_RECALIBRATION_GATK4 {
   take:
     ch_bam_interval   // channel: [ val(meta), path(bam), path(bai), path(interval) ]
-    fasta   // path(fasta)
-    fai   // path(fai)
-    dict   // path(dict)
+    ch_fasta   // channel: [ val(meta), path(fasta) ]
+    ch_fai   // channel: [ val(meta), path(fai) ]
+    ch_dict   // channel: [ val(meta), path(dict) ]
 
   main:
     ch_versions = Channel.empty()
+    ch_bqsr_bam = Channel.empty()
+    ch_bqsr_bai = Channel.empty()
 
-    ch_fasta = Channel.value( fasta )
-      .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
-    ch_fai = Channel.value( fai )
-      .map{ genome_fasta -> [ [ id:'fai' ], genome_fasta ] }
+    fasta = ch_fasta.map{ meta, fasta -> [ fasta ] }
+    fai = ch_fai.map{ meta, fai -> [ fai ] }
+    dict = ch_dict.map{ meta, dict -> [ dict ] }
 
     known_sites = []
     known_sites_tbi = []
@@ -45,6 +46,8 @@ workflow BAM_BASE_RECALIBRATION_GATK4 {
     bqsr_table = GATK4_BASERECALIBRATOR.out.table
     ch_bam_interval_bqsrtable = ch_bam_interval.join( bqsr_table )
       .map{ meta, bam, bai, interval, bqsrtable -> 
+        meta = meta + [ bqsr: "gatk" ]
+        meta.id = meta.id+".bqsr"
         [ meta, bam, bai, bqsrtable, interval ]
       }
 
@@ -53,17 +56,22 @@ workflow BAM_BASE_RECALIBRATION_GATK4 {
 
     ch_bqsr_interval_bams = GATK4_APPLYBQSR.out.bam
       .map{ meta, bam -> 
-        [ [sample_id: meta.sample_id, id:meta.sample_id+".bqsr", run_id:meta.run_id], bam ] 
+        meta = meta - meta.subMap("interval")
+        meta.id = meta.id.replaceAll(/.\d+.bqsr$/,".bqsr")
+        [ meta, bam ]
       }
       .groupTuple()
+
 
     BAM_MERGE( ch_bqsr_interval_bams, ch_fasta, ch_fai )
     ch_versions = ch_versions.mix( BAM_MERGE.out.versions )  
 
-    ch_bqsr_bams = BAM_MERGE.out.bam
-      .join( BAM_MERGE.out.bai )
+    ch_bqsr_bam = ch_bqsr_bam.mix( BAM_MERGE.out.bam )
+    ch_bqsr_bai = ch_bqsr_bai.mix( BAM_MERGE.out.bai )
+
   emit:
-    bam = ch_bqsr_bams  // channel: [ meta, bam, bai ]
+    bam = ch_bqsr_bam  // channel: [ meta, bam ]
+    bai = ch_bqsr_bai  // channel: [ meta, bai ]
     versions = ch_versions // channel: [ versions.yml ]
 
 }

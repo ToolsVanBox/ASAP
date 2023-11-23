@@ -12,19 +12,12 @@ include { FASTQ_ALIGN_BWAMEM2 } from '../../../subworkflows/local/fastq_align_bw
 workflow FASTQ_ALIGN {
   take:
     ch_fastq // channel: [ meta, path(fastq) ]
+    ch_fasta // channel: [ meta, path(fasta) ]
   main:
     ch_versions = Channel.empty()
-    ch_bams_to_merge = Channel.empty()    
+    ch_align_bam = Channel.empty()
+    ch_align_bai = Channel.empty()    
 
-    def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
-    def fai = file( fasta.toString()+".fai", checkIfExists: true )
-    
-    ch_fasta = Channel.value( fasta )
-      .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
-    ch_fai = Channel.value( fai )
-      .map{ genome_fasta -> [ [ id:'fai' ], genome_fasta ] }
-
-        
     for ( tool in params.fastq_align.tool ) {
       tool = tool.toLowerCase()      
       def known_tool = false    
@@ -49,16 +42,19 @@ workflow FASTQ_ALIGN {
 
           // Align fastq per lane
           bam_sort = params.fastq_align.bam_sort
-          FASTQ_ALIGN_BWA( ch_fastq, bwa_index, bam_sort, ch_fasta )
+
+          ch_fastq_bwa = ch_fastq
+            .map{ meta, bam ->              
+              meta = meta + [align: "bwamem1" ]
+              meta.id = meta.id+".bwamem1"
+              [ meta, bam ]
+            }
+          
+          FASTQ_ALIGN_BWA( ch_fastq_bwa, bwa_index, bam_sort, ch_fasta )
           ch_versions = ch_versions.mix( FASTQ_ALIGN_BWA.out.versions.first() )
           
-          ch_bwamem1_bams = FASTQ_ALIGN_BWA.out.bam
-            .map{ meta, bam ->
-              [ [sample_id: meta.sample_id, id:meta.sample_id+".bwamem1"], bam ] 
-            }
-            .groupTuple()
-
-          ch_bams_to_merge = ch_bams_to_merge.mix( ch_bwamem1_bams )
+          ch_align_bam = ch_align_bam.mix( FASTQ_ALIGN_BWA.out.bam )
+          ch_align_bai = ch_align_bam.mix( FASTQ_ALIGN_BWA.out.bai )
 
           known_tool = true
       } 
@@ -83,16 +79,19 @@ workflow FASTQ_ALIGN {
 
           // Align fastq per lane
           bam_sort = params.fastq_align.bam_sort
-          FASTQ_ALIGN_BWAMEM2( ch_fastq, bwamem2_index, bam_sort, ch_fasta )
+
+          ch_fastq_bwamem2 = ch_fastq
+            .map{ meta, bam ->
+              meta = meta + [ align: "bwamem2" ]
+              meta.id = meta.id+".bwamem2"
+              [ meta, bam ]
+            }
+
+          FASTQ_ALIGN_BWAMEM2( ch_fastq_bwamem2, bwamem2_index, bam_sort, ch_fasta )
           ch_versions = ch_versions.mix( FASTQ_ALIGN_BWAMEM2.out.versions.first() )
 
-          ch_bwamem2_bams = FASTQ_ALIGN_BWAMEM2.out.bam
-            .map{ meta, bam -> 
-              [ [sample_id: meta.sample_id, id:meta.sample_id+".bwamem2"], bam ] 
-            }
-            .groupTuple()
-
-          ch_bams_to_merge = ch_bams_to_merge.mix( ch_bwamem2_bams )
+          ch_align_bam = ch_align_bam.mix( FASTQ_ALIGN_BWAMEM2.out.bam )
+          ch_align_bai = ch_align_bam.mix( FASTQ_ALIGN_BWAMEM2.out.bai )
           
           known_tool = true
       }
@@ -102,17 +101,9 @@ workflow FASTQ_ALIGN {
       }
     }
 
-    // Merge bam files
-    BAM_MERGE( ch_bams_to_merge, ch_fasta, ch_fai )
-    ch_versions = ch_versions.mix( BAM_MERGE.out.versions.first() )
-
-    ch_bams = BAM_MERGE.out.bam
-      .join( BAM_MERGE.out.bai )
-
     emit:
-      bam = ch_bams // channel: [ meta, bam, bai ]
+      bam = ch_align_bam // channel: [ meta, bam ]
+      bai = ch_align_bai // channel: [ meta, bai ]
       versions = ch_versions // channel: [ versions.yml ]
 
 }
-
-
