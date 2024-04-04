@@ -11,6 +11,7 @@ workflow VCF_VARIANT_ANNOTATION {
     ch_vcf  // channel: [ meta, path(vcf) ]
   main:
     ch_versions = Channel.empty()
+    ch_annotated_vcf_tbi = Channel.empty()
 
     def snpeff_db = params.genomes[params.genome].snpeff_db
     def snpeff_cache = file( params.genomes[params.genome].snpeff_cache, checkIfExists: true )
@@ -26,6 +27,7 @@ workflow VCF_VARIANT_ANNOTATION {
         
         VCF_ANNOTATE_SNPEFF( ch_vcf, snpeff_db, ch_snpeff_cache )
         ch_versions = ch_versions.mix( VCF_ANNOTATE_SNPEFF.out.versions )
+        ch_annotated_vcf_tbi = ch_annotated_vcf_tbi.mix( VCF_ANNOTATE_SNPEFF.out.vcf_tbi )
       
         known_tool = true
       }
@@ -36,6 +38,7 @@ workflow VCF_VARIANT_ANNOTATION {
     }
   emit:
     versions = ch_versions // channel: [ versions.yml ]
+    vcf_tbi = ch_annotated_vcf_tbi // channel: [ meta, vcf, tbi ]
 }
 
 

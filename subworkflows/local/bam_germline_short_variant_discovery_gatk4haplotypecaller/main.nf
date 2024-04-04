@@ -60,30 +60,29 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
         def interval_id = m[0][1]
         [ [id: "${meta[0].run_id}.${interval_id}", run_id: meta[0].run_id ], gvcf, tbi, intervals, [], [] ]
       }
-    //   GATK4_GENOMICSDBIMPORT( ch_genomicsdbimport, false, false, false )
+      GATK4_GENOMICSDBIMPORT( ch_genomicsdbimport, false, false, false )
 
-    println "1"
-    ch_genomicsdbimport.view()
+    // println "1"
+    // ch_genomicsdbimport.view()
 
-      // IF MULTIPLE MAPPERS AND/OR MARKDUP
-    ch_genomicsdbimport = ch_genomicsdbimport
-      .map{ meta, vcf, tbi, intervals, x, y ->
-        vcfs = vcf.toList()
-        m = meta.id =~ /.(\d+)$/
-        def interval_id = m[0][1]
-        for ( v in vcfs ) {
-          sample_map_file = file("sample_map.${interval_id}.txt")
-          // if ( ! sample_map_file.exists() ) {
-            sample_map_file.append( v.getName().toString().replaceAll(/.\d+.vcf.gz$/,"") + "\t" + v + "\n" )          
-          // }
-        }
-        [ meta, sample_map_file, [], intervals, [], [] ]
-      }
+    //   // IF MULTIPLE MAPPERS AND/OR MARKDUP
+    // ch_genomicsdbimport = ch_genomicsdbimport
+    //   .map{ meta, vcf, tbi, intervals, x, y ->
+    //     vcfs = vcf.toList()
+    //     m = meta.id =~ /.(\d+)$/
+    //     def interval_id = m[0][1]
+    //     for ( v in vcfs ) {
+    //       sample_map_file = file("sample_map.${interval_id}.txt")
+    //       // if ( ! sample_map_file.exists() ) {
+    //         sample_map_file.append( v.getName().toString().replaceAll(/.\d+.vcf.gz$/,"") + "\t" + v + "\n" )          
+    //       // }
+    //     }
+    //     [ meta, sample_map_file, [], intervals, [], [] ]
+    //   }
 
-    println "2"
-    ch_genomicsdbimport.view()
-
-    GATK4_GENOMICSDBIMPORT( ch_genomicsdbimport, false, false, true )
+    // println "2"
+    // ch_genomicsdbimport.view()
+    // GATK4_GENOMICSDBIMPORT( ch_genomicsdbimport, false, false, true )
 
     ch_versions = ch_versions.mix( GATK4_GENOMICSDBIMPORT.out.versions )  
 
