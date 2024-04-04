@@ -28,11 +28,14 @@ include { BAM_TUMORONLY_COPY_NUMBER_DISCOVERY } from '../subworkflows/local/bam_
 include { VCF_VARIANT_FILTRATION } from '../subworkflows/local/vcf_variant_filtration/main.nf'
 include { VCF_VARIANT_ANNOTATION } from '../subworkflows/local/vcf_variant_annotation/main.nf'
 include { VCF_STRUCTURAL_VARIANT_FILTRATION } from '../subworkflows/local/vcf_structural_variant_filtration/main.nf'
+
+include { VCF_SOMATIC_FILTRATION } from '../subworkflows/local/vcf_somatic_filtration/main.nf'
  
 // Include nf-core modules
 include { GATK4_SPLITINTERVALS } from '../modules/nf-core/gatk4/splitintervals/main'                                                                          
 
 ch_input = parseSampleSheet( Channel.fromSamplesheet("input") )
+
 ch_input_type = ch_input.branch{
         bam:   it[0].data_type == "bam"
         fastq: it[0].data_type == "fastq"
@@ -41,17 +44,20 @@ ch_input_type = ch_input.branch{
 
 workflow ASAP {
 
+    // Create empty channels
     ch_versions = Channel.empty()
     ch_bam_bai = Channel.empty()
     ch_other_bam_bai = Channel.empty()
     ch_vcfs = Channel.empty()
     ch_tbi = Channel.empty()    
-
+    
+    // Define variables
     def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
     def fai = file( fasta.toString()+".fai", checkIfExists: true )
     def fasta_dict = file( fasta.toString()+".dict", checkIfExists: true )
     def dict = file( fasta.toString().replace(".fasta",".dict" ), checkIfExists: true )
     
+    // Create channels of the variables
     ch_fasta = Channel.value( fasta )
       .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
     ch_fai = Channel.value( fai )
@@ -61,25 +67,30 @@ workflow ASAP {
     ch_fasta_dict = Channel.value( dict )
       .map{ genome_fasta_dict -> [ [ id:'fasta_dict' ], genome_fasta_dict ] }
 
+    // Split bams from the input data into dedupped and not dedupped (other)
     ch_bam_types = ch_input_type.bam.branch{
         dedup: it[1].toString() =~ /.*dedup.bam$/
         other: true
     }
-    
+
+    // Split crams from the input data into dedupped and not dedupped (other)
     ch_cram_types = ch_input_type.cram.branch{
         dedup: it[1].toString() =~ /.*dedup.cram$/
         other: true
     }
 
+    // FASTQ QC PRE MAPPING
     if ( params.run.fastq_qc_pre_mapping ) {
         FASTQ_QC_PRE_MAPPING( ch_input_type.fastq )    
         ch_versions = ch_versions.mix( FASTQ_QC_PRE_MAPPING.out.versions )
     }
 
+    // FASTQ ALIGN
     if ( params.run.fastq_align ) {
         FASTQ_ALIGN( ch_input_type.fastq, ch_fasta )
         ch_versions = ch_versions.mix( FASTQ_ALIGN.out.versions )
 
+        // Create channel of bams to merge together
         ch_bams_to_merge = FASTQ_ALIGN.out.bam
             .map{ meta, bam ->
                 meta = meta - meta.subMap('read_group')
@@ -88,47 +99,58 @@ workflow ASAP {
             }
             .groupTuple()
 
+        // MERGE BAM FILES
         BAM_MERGE( ch_bams_to_merge, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix( BAM_MERGE.out.versions.first() )
 
+        // Add non dedupped bams files to the "other" channel
         ch_other_bam_bai = ch_bam_types.other.mix( BAM_MERGE.out.bam.join( BAM_MERGE.out.bai ) )
     }
     
+    // MARK DUPLICATES
     if ( params.run.bam_markduplicates ) {
 
         BAM_MARKDUPLICATES( ch_other_bam_bai, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_MARKDUPLICATES.out.versions )
 
+        // Join bam files and bai files    
         ch_dedup_bam_bai = BAM_MARKDUPLICATES.out.bam
             .join( BAM_MARKDUPLICATES.out.bai )
         
+        // Mix dedupped input bam files with the "new" dedupped bam files
         ch_bam_bai = ch_bam_types.dedup
             .mix( ch_dedup_bam_bai )
-    } else {
+    } else {        
+        // Mix dedupped input bam files with the non dedupped bam files IF Mark duplicated is skipped 
         ch_bam_bai = ch_bam_types.dedup
             .mix( ch_other_bam_bai )
     }
 
+    // Convert bam files to cram files (for backup)
     // BAM_CONVERT_TO_CRAM( ch_bam_bai, ch_fasta, ch_fai )
     // ch_versions = ch_versions.mix( BAM_CONVERT_TO_CRAM.out.versions.first() )
 
     // ch_cram_crai = BAM_CONVERT_TO_CRAM.out.cram_crai
 
+    // POST MAPPING
     if ( params.run.bam_qc_post_mapping ) {
         BAM_QC_POST_MAPPING( ch_bam_bai, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_QC_POST_MAPPING.out.versions )
     }
 
+    // FINGERPRINT
     if ( params.run.bam_fingerprint ) {
         BAM_FINGERPRINT( ch_bam_bai )
         ch_versions = ch_versions.mix( BAM_FINGERPRINT.out.versions )
     }
-
+    
+    // GET TELOMERES
     if ( params.run.bam_telomeres ) {
         BAM_TELOMERES( ch_bam_bai )
         ch_versions = ch_versions.mix( BAM_TELOMERES.out.versions )
     }   
-
+   
+    // Variant calling
     if ( params.run.bam_germline_short_variant_discovery || params.run.bam_somatic_short_variant_discovery ) {
         def interval_list = file( params.genomes[params.genome].interval_list, checkIfExists: true )
     
@@ -150,12 +172,14 @@ workflow ASAP {
     }
 
     // Germline calling
-    if ( params.run.bam_germline_short_variant_discovery ) {
+    if ( params.run.bam_germline_short_variant_discovery ) {        
         BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( ch_bam_bai, ch_split_intervals, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.versions )
-        
+
         ch_vcfs = ch_vcfs.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.vcf )
         ch_tbi = ch_tbi.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.tbi )
+
+        ch_vcfs_tbi = ch_vcfs.join( ch_tbi ).view()
     }
 
     if ( params.run.bam_germline_copy_number_discovery ) {
@@ -237,7 +261,9 @@ workflow ASAP {
     
     if ( params.run.vcf_variant_annotation ) {
         VCF_VARIANT_ANNOTATION( ch_vcfs )
-        ch_versions = ch_versions.mix( VCF_VARIANT_ANNOTATION.out.versions )
+
+        ch_vcf_tbi = VCF_VARIANT_ANNOTATION.out.vcf_tbi
+
     }
 
     // Structural variant filtration
@@ -247,78 +273,24 @@ workflow ASAP {
         ch_versions = ch_versions.mix( VCF_STRUCTURAL_VARIANT_FILTRATION.out.versions )
     }
 
+    // Somatic filtering
+    if ( params.run.vcf_somatic_filtration ) {
+        ch_germline_vcf_tbi = ch_vcf_tbi
+            .map{ meta, vcf, tbi ->
+                if ( meta.calling_type == "germline" ) {
+                    [ meta, vcf, tbi]
+                }
+            }
+        
+        VCF_SOMATIC_FILTRATION( ch_germline_vcf_tbi, ch_bam_bai )
+        ch_versions = ch_versions.mix( VCF_SOMATIC_FILTRATION.out.versions )
+
+    }
+
     
 //     // CUSTOM_DUMPSOFTWAREVERSIONS(ch_versions.unique().collectFile(name: 'collated_versions.yml'))
 //     // version_yaml = CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect()
 }
-
-// def parseSampleSheet(csv_file) {
-
-//     if ( ! params.run_id ) {
-//         run_id = params.out_dir.split('/')[-1]
-//     if ( params.out_dir == './' ) {
-//         run_id = "${PWD}".split('/')[-1]
-//     }
-//     } else {
-//         run_id = params.run_id
-//     }
-
-//     println csv_file
-//     Channel.fromPath(csv_file).splitCsv(header: true).view()
-
-//     Channel.fromPath(csv_file).splitCsv(header: true)
-//         // Retrieves number of lanes by grouping together by patient and sample and counting how many entries there are for this combination
-//         .map{ row ->
-//             if (!(row.sample_id)) {
-//                 error("Missing field in csv file header. The csv file must have field 'sample_id'.")
-//             }
-//             else if (row.sample_id.contains(" ")) {
-//                 error("Invalid value in csv file. Value for 'sample_id' can not contain space.")
-//             }
-//             [ [ row.sample_id.toString() ], row ]
-//         }
-//         .view()
-//         .groupTuple()
-//         .map{ meta, rows ->
-//             size = rows.size()
-//             [ rows, size ]
-//         }.transpose()
-//         .map { row, num_lanes ->
-//             def meta = [:]
-//             def sample_id = row.sample_id
-//             meta.sample_id = sample_id
-//             meta.run_id = run_id
-//             def sample_type = 'tumor'
-//             if (row.sample_type) {
-//                 sample_type = row.sample_type
-//             }
-//             meta.sample_type = sample_type
-
-//             // mapping with fastq
-//             if (row.fastq_2) {
-//                 println row
-//                 def fastq_1 = file(row.fastq_1, checkIfExists: true)
-//                 def fastq_2 = file(row.fastq_2, checkIfExists: true)
-//                 def platform = row.platform ?: "ILLUMINA"
-//                 def (flowcell, lane, machine, run_nr) = flowcellLaneFromFastq(fastq_1)
-//                 def rg_id = "${sample_id}_${flowcell}_${lane}"
-//                 def read_group  = "\"@RG\\tID:${rg_id}\\tSM:${sample_id}\\tPL:${platform}\\tLB:${sample_id}\\tPU:${flowcell}\""
-//                 meta.id = rg_id.toString()                
-//                 meta.read_group = read_group.toString()
-//                 meta.data_type = "fastq"
-//                 return [ meta, [ fastq_1, fastq_2 ] ]
-//             }
-//             // bam part 
-//             if (row.bam) {
-//                 def bam = file(row.bam, checkIfExists: true)
-//                 meta.data_type = "bam"
-//                 // meta.id = meta.sample_id
-//                 meta.id = bam.getBaseName()
-//                 def bai = file(row.bai, checkIfExists: true)
-//                 return [ meta, bam, bai ]
-//             }
-//         }
-// }
 
 def parseSampleSheet( ch_csv ) {
     if ( ! params.run_id ) {
@@ -334,10 +306,15 @@ def parseSampleSheet( ch_csv ) {
         .map{ meta, fastq_1, fastq_2, bam, bai, sample_type, platform ->
             meta = meta + [ run_id: run_id, sample_type: sample_type ]
             if ( fastq_1 && fastq_2 ) {
-                // Map per fastq ipv lane
-                def (flowcell, lane, machine, run_nr) = flowcellLaneFromFastq(fastq_1)
-                def rg_id = "${meta.sample}_${flowcell}_${lane}"
-                def read_group  = "\"@RG\\tID:${rg_id}\\tSM:${meta.sample}\\tPL:${platform}\\tLB:${meta.sample}\\tPU:${flowcell}\""
+                // Map per lane OLD WAY
+
+                // def (flowcell, lane, machine, run_nr) = flowcellLaneFromFastq(fastq_1)
+                // def rg_id = "${meta.sample}_${flowcell}_${lane}"
+                // def read_group  = "\"@RG\\tID:${rg_id}\\tSM:${meta.sample}\\tPL:${platform}\\tLB:${meta.sample}\\tPU:${flowcell}\""
+                
+                // Map per fastq NEW APPROACH                
+                def rg_id = fastq_1.getSimpleName()
+                def read_group  = "\"@RG\\tID:${rg_id}\\tSM:${meta.sample}\\tPL:${platform}\\tLB:${meta.sample}\""
                 meta = meta + [ id: rg_id.toString() ]
                 meta = meta + [ read_group: read_group.toString() ]
                 meta = meta + [ data_type: "fastq" ]
