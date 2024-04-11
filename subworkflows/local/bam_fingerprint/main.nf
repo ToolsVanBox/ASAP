@@ -3,10 +3,15 @@
 
 // Include local subworkflows
 include { BAM_FINGERPRINT_PICARD } from '../../../subworkflows/local/bam_fingerprint_picard/main'                             
+include { BAM_FINGERPRINT_GATK } from '../../../subworkflows/local/bam_fingerprint_gatk/main' 
 
 workflow BAM_FINGERPRINT {
   take:
-    ch_bam_bai // channel: [ meta, path(bam), path(bai) ] 
+    ch_bam_bai  // channel: [ meta, path(bam), path(bai) ] 
+    ch_fasta    // channel: [ val(meta), path(fasta) ]
+    ch_fai      // channel: [ val(meta), path(fai) ]
+    ch_dict     // channel: [ val(meta), path(dict) ]
+
   main:
     ch_versions = Channel.empty() 
     
@@ -24,6 +29,16 @@ workflow BAM_FINGERPRINT {
           BAM_FINGERPRINT_PICARD( ch_bam_bai_picard, [], ch_haplotype )   
           ch_versions = ch_versions.mix( BAM_FINGERPRINT_PICARD.out.versions )  
                     
+          known_tool = true
+      }
+
+      // Run GATKunifiedgenotyper
+      if (tool == "gatkunifiedgenotyper") {
+          //ch_bam_bai_gatk = ch_bam_bai.map{ meta, bam, bai -> [ [ id:meta.run_id ], bam, bai ] }.groupTuple()
+
+          println "Start GATKunifiedgenotyper"
+          BAM_FINGERPRINT_GATK( ch_bam_bai, ch_fasta, ch_fai, ch_dict )
+
           known_tool = true
       }
 

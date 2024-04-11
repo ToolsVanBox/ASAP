@@ -61,7 +61,7 @@ workflow ASAP {
     ch_fasta = Channel.value( fasta )
       .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] }    
     ch_fai = Channel.value( fai )
-      .map{ genome_fasta -> [ [ id:'fai' ], genome_fasta ] }
+      .map{ genome_fai -> [ [ id:'fai' ], genome_fai ] }
     ch_dict = Channel.value( dict )
       .map{ genome_dict -> [ [ id:'dict' ], genome_dict ] }
     ch_fasta_dict = Channel.value( dict )
@@ -140,7 +140,7 @@ workflow ASAP {
 
     // FINGERPRINT
     if ( params.run.bam_fingerprint ) {
-        BAM_FINGERPRINT( ch_bam_bai )
+        BAM_FINGERPRINT( ch_bam_bai, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_FINGERPRINT.out.versions )
     }
     
