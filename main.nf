@@ -9,5 +9,12 @@ workflow {
     for( line : allLines ) {
         println line
     }
-    ASAP()
+
+    myFile = file("${projectDir}/asap_ascii_art.txt")
+    allLines = myFile.readLines()
+    for( line : allLines ) {
+        println line
+    }
+
+    // ASAP()
 }
