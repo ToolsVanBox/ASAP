@@ -127,10 +127,10 @@ workflow ASAP {
     }
 
     // Convert bam files to cram files (for backup)
-    // BAM_CONVERT_TO_CRAM( ch_bam_bai, ch_fasta, ch_fai )
-    // ch_versions = ch_versions.mix( BAM_CONVERT_TO_CRAM.out.versions.first() )
+    BAM_CONVERT_TO_CRAM( ch_bam_bai, ch_fasta, ch_fai )
+    ch_versions = ch_versions.mix( BAM_CONVERT_TO_CRAM.out.versions.first() )
 
-    // ch_cram_crai = BAM_CONVERT_TO_CRAM.out.cram_crai
+    ch_cram_crai = BAM_CONVERT_TO_CRAM.out.cram_crai
 
     // POST MAPPING
     if ( params.run.bam_qc_post_mapping ) {
@@ -267,7 +267,7 @@ workflow ASAP {
     }
 
     // Structural variant filtration
-    if ( params.run.vcf_structural_variant_filtration ) {
+    if ( params.run.vcf_somatic_structural_variant_filtration || params.run.vcf_germline_structural_variant_filtration || params.run.vcf_tumoronly_structural_variant_filtration ) {
         
         VCF_STRUCTURAL_VARIANT_FILTRATION( ch_gridss_vcf, ch_bam_bai_sample_type.normal, ch_bam_bai_sample_type.tumor, ch_fasta, ch_fai, ch_fasta_dict )
         ch_versions = ch_versions.mix( VCF_STRUCTURAL_VARIANT_FILTRATION.out.versions )
