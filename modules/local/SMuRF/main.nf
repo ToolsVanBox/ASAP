@@ -10,6 +10,8 @@ process SMURF {
     tuple val(meta), path("*SMuRF.vcf"), emit: smurf_vcf
     tuple val(meta), path("*SMuRF.filtered.vcf"), emit: smurf_filtered_vcf
     tuple val(meta), path("*.pdf"), emit: smurf_pdf
+    path "versions.yml", emit: versions
+
 
   script:
     b = bams ? ' -b ' + bams.join(' -b ') : ''
@@ -31,5 +33,9 @@ process SMURF {
     -t ${task.cpus} \
     -c ${config}
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        SMuRF: \$(echo \$(python /smurf/SMuRF.py --version 2>&1) )
+    END_VERSIONS
     """
 }
