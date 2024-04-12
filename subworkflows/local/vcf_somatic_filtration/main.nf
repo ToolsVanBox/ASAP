@@ -20,7 +20,6 @@ workflow VCF_SOMATIC_FILTRATION {
 
       if ( tool == "smurf" ) {
         
-        println "RUN SMURF"
         VCF_SOMATIC_FILTRATION_SMURF( ch_vcf_tbi, ch_bam_bai )
         // ch_versions = ch_versions.mix( VCF_SOMATIC_FILTRATION_SMURF.out.versions )
         

@@ -36,7 +36,6 @@ workflow BAM_FINGERPRINT {
       if (tool == "gatkunifiedgenotyper") {
           //ch_bam_bai_gatk = ch_bam_bai.map{ meta, bam, bai -> [ [ id:meta.run_id ], bam, bai ] }.groupTuple()
 
-          println "Start GATKunifiedgenotyper"
           BAM_FINGERPRINT_GATK( ch_bam_bai, ch_fasta, ch_fai, ch_dict )
 
           known_tool = true
