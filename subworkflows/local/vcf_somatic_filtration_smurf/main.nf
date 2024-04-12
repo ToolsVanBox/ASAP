@@ -9,7 +9,7 @@ include { SMURF } from '../../../modules/local/SMuRF/main.nf'
 include { TABIX_BGZIP } from '../../../modules/nf-core/tabix/bgzip/main.nf'
 include { SNPSIFT_SPLIT } from '../../../modules/nf-core/snpsift/split/main.nf'
 include { TABIX_BGZIPTABIX } from '../../../modules/nf-core/tabix/bgziptabix/main.nf'
-include { SNPSIFT_SPLIT as SNPSIFT_JOIN_FILTERED_VCFS } from '../../../modules/nf-core/snpsift/split/main.nf'
+include { SNPSIFT_SPLIT as SNPSIFT_JOIN_SMURF_FILTERED_VCFS } from '../../../modules/nf-core/snpsift/split/main.nf'
 include { SNPSIFT_SPLIT as SNPSIFT_JOIN_SMURF_VCFS } from '../../../modules/nf-core/snpsift/split/main.nf'
 
 workflow VCF_SOMATIC_FILTRATION_SMURF {
@@ -73,31 +73,31 @@ workflow VCF_SOMATIC_FILTRATION_SMURF {
 
       ch_filtered_vcfs = SMURF.out.smurf_filtered_vcf
         .map{ meta, vcf_file -> 
-            [ [ id: file(meta.id).getBaseName()+"SMuRF.filtered" ], vcf_file ]
+            [ [ id: file(meta.id).getBaseName()+".SMuRF.filtered" ], vcf_file ]
         }
         .groupTuple()
     
       ch_smurf_vcfs = SMURF.out.smurf_vcf
           .map{ meta, vcf_file -> 
-              [ [ id: file(meta.id).getBaseName()+"SMuRF" ], vcf_file ]
+              [ [ id: file(meta.id).getBaseName()+".SMuRF" ], vcf_file ]
           }
           .groupTuple()
 
-      SNPSIFT_JOIN_FILTERED_VCFS( ch_filtered_vcfs )
+      SNPSIFT_JOIN_SMURF_FILTERED_VCFS( ch_filtered_vcfs )
 
       SNPSIFT_JOIN_SMURF_VCFS( ch_smurf_vcfs )
 
-      SNPSIFT_JOIN_FILTERED_VCFS.out.out_vcfs
-        .map{ meta, vcf -> 
-          fname = vcf.getName()
-          vcf.copyTo("${params.out_dir}/vcf/germline/somatic_filtering/SMuRF/${fname}")
-        }
+      // SNPSIFT_JOIN_SMURF_FILTERED_VCFS.out.out_vcfs
+      //   .map{ meta, vcf -> 
+      //     fname = vcf.getName()
+      //     vcf.copyTo("${params.out_dir}/vcf/germline/somatic_filtering/SMuRF/${fname}")
+      //   }
       
-      SNPSIFT_JOIN_SMURF_VCFS.out.out_vcfs
-        .map{ meta, vcf -> 
-          fname = vcf.getName()
-          vcf.copyTo("${params.out_dir}/vcf/germline/somatic_filtering/SMuRF/${fname}")
-        }
+      // SNPSIFT_JOIN_SMURF_VCFS.out.out_vcfs
+      //   .map{ meta, vcf -> 
+      //     fname = vcf.getName()
+      //     vcf.copyTo("${params.out_dir}/vcf/germline/somatic_filtering/SMuRF/${fname}")
+      //   }
   // emit:
     
 }
