@@ -54,5 +54,9 @@
         }          
       },
       "required": ["sample"]
-    }
+    },
+    "allOf": [
+      {"uniqueEntries": ["fastq_1", "fastq_2"]},
+      {"uniqueEntries": ["bam","bai"]}
+  ]
   }
