@@ -16,5 +16,5 @@ workflow {
         println line
     }
 
-    // ASAP()
+    ASAP()
 }
