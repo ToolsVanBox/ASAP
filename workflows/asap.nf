@@ -179,7 +179,6 @@ workflow ASAP {
         ch_vcfs = ch_vcfs.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.vcf )
         ch_tbi = ch_tbi.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.tbi )
 
-        ch_vcfs_tbi = ch_vcfs.join( ch_tbi ).view()
     }
 
     if ( params.run.bam_germline_copy_number_discovery ) {
