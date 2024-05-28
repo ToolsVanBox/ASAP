@@ -45,17 +45,21 @@ workflow VCF_SOMATIC_FILTRATION_SMURF {
       .combine( 
         ch_bam_bai
           .map{ meta, bam, bai ->
-          if (meta.sample_type == "normal") {
-            meta2 = meta - meta.subMap('sample','sample_type','id')
-            [ meta2, meta.sample ]
-          }
+            if (meta.sample_type == "normal") {
+              // meta2 = meta - meta.subMap('sample','sample_type','id')
+              meta2 = [:]
+              meta2.run_id = meta.run_id
+              [ meta2, meta.sample ]
+            }
           }
           .groupTuple()
           .combine( 
             ch_bam_bai
               .map{ meta, bam, bai ->
-                meta = meta - meta.subMap('sample','sample_type','id')
-                [meta, bam, bai]
+                // meta = meta - meta.subMap('sample','sample_type','id')
+                meta2 = [:]
+                meta2.run_id = meta.run_id
+                [meta2, bam, bai]
               }
               .groupTuple()
           )
@@ -68,7 +72,7 @@ workflow VCF_SOMATIC_FILTRATION_SMURF {
           meta = meta + [ bulk_names: meta2.bulk_names ]
           [ meta, vcf_file, tbi, bam, bai ]
       }
-    
+
       SMURF( ch_smurf )
 
       ch_filtered_vcfs = SMURF.out.smurf_filtered_vcf
@@ -82,22 +86,13 @@ workflow VCF_SOMATIC_FILTRATION_SMURF {
               [ [ id: file(meta.id).getBaseName()+".SMuRF" ], vcf_file ]
           }
           .groupTuple()
+      
+      ch_filtered_vcfs.view()
 
       SNPSIFT_JOIN_SMURF_FILTERED_VCFS( ch_filtered_vcfs )
 
       SNPSIFT_JOIN_SMURF_VCFS( ch_smurf_vcfs )
 
-      // SNPSIFT_JOIN_SMURF_FILTERED_VCFS.out.out_vcfs
-      //   .map{ meta, vcf -> 
-      //     fname = vcf.getName()
-      //     vcf.copyTo("${params.out_dir}/vcf/germline/somatic_filtering/SMuRF/${fname}")
-      //   }
-      
-      // SNPSIFT_JOIN_SMURF_VCFS.out.out_vcfs
-      //   .map{ meta, vcf -> 
-      //     fname = vcf.getName()
-      //     vcf.copyTo("${params.out_dir}/vcf/germline/somatic_filtering/SMuRF/${fname}")
-      //   }
   // emit:
     
 }
