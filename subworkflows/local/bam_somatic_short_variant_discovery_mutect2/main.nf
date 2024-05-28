@@ -175,7 +175,6 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2 {
             .join( LEARNREADORIENTATIONMODEL.out.artifactprior )
             .join( ch_segmentation_output )
             .join( ch_contamination_output )
-            .view()
 
     // //     vcf_to_filter = vcf.join(tbi, failOnDuplicate: true, failOnMismatch: true)
     // //     .join(stats, failOnDuplicate: true, failOnMismatch: true)
