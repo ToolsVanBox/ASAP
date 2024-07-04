@@ -259,7 +259,7 @@ workflow ASAP {
     }
     
     if ( params.run.vcf_variant_annotation ) {
-        VCF_VARIANT_ANNOTATION( ch_vcfs )
+        VCF_VARIANT_ANNOTATION( ch_vcfs, ch_fasta )
 
         ch_vcf_tbi = VCF_VARIANT_ANNOTATION.out.vcf_tbi
 
