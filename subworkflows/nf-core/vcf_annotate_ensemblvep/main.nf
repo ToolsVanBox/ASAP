@@ -17,6 +17,7 @@ workflow VCF_ANNOTATE_ENSEMBLVEP {
 
     main:
     ch_versions = Channel.empty()
+    ch_cache = ch_cache.map{ meta, cache_dir -> [ cache_dir ] }
 
     ENSEMBLVEP_VEP(
         ch_vcf,
