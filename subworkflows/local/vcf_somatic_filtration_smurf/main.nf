@@ -50,6 +50,10 @@ workflow VCF_SOMATIC_FILTRATION_SMURF {
               meta2 = [:]
               meta2.run_id = meta.run_id
               [ meta2, meta.sample ]
+            } else {
+              meta2 = [:]
+              meta2.run_id = meta.run_id
+              [ meta2, [] ]
             }
           }
           .groupTuple()
@@ -72,6 +76,38 @@ workflow VCF_SOMATIC_FILTRATION_SMURF {
           meta = meta + [ bulk_names: meta2.bulk_names ]
           [ meta, vcf_file, tbi, bam, bai ]
       }
+
+    // ch_smurf = TABIX_BGZIPTABIX.out.gz_tbi
+    //   .combine( 
+    //     ch_bam_bai
+    //       .map{ meta, bam, bai ->
+    //         if (meta.sample_type == "normal") {
+    //           // meta2 = meta - meta.subMap('sample','sample_type','id')
+    //           meta2 = [:]
+    //           meta2.run_id = meta.run_id
+    //           [ meta2, meta.sample ]
+    //         }
+    //       }
+    //       .groupTuple()
+    //       .combine( 
+    //         ch_bam_bai
+    //           .map{ meta, bam, bai ->
+    //             // meta = meta - meta.subMap('sample','sample_type','id')
+    //             meta2 = [:]
+    //             meta2.run_id = meta.run_id
+    //             [meta2, bam, bai]
+    //           }
+    //           .groupTuple()
+    //       )
+    //       .map{ meta, bulk_names2, meta2, bam, bai ->
+    //         meta = meta + [ bulk_names: bulk_names2 ]
+    //         [ meta, bam, bai ]
+    //       }
+    //   )
+    //   .map{ meta, vcf_file, tbi, meta2, bam, bai ->
+    //       meta = meta + [ bulk_names: meta2.bulk_names ]
+    //       [ meta, vcf_file, tbi, bam, bai ]
+    //   }
 
       SMURF( ch_smurf )
 
