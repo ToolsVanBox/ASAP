@@ -127,10 +127,11 @@ workflow ASAP {
     }
 
     // Convert bam files to cram files (for backup)
-    BAM_CONVERT_TO_CRAM( ch_bam_bai, ch_fasta, ch_fai )
-    ch_versions = ch_versions.mix( BAM_CONVERT_TO_CRAM.out.versions.first() )
-
-    ch_cram_crai = BAM_CONVERT_TO_CRAM.out.cram_crai
+    if ( params.run.bam_convert_to_cram ) {
+        BAM_CONVERT_TO_CRAM( ch_bam_bai, ch_fasta, ch_fai )
+        ch_versions = ch_versions.mix( BAM_CONVERT_TO_CRAM.out.versions.first() )
+        ch_cram_crai = BAM_CONVERT_TO_CRAM.out.cram_crai
+    }
 
     // POST MAPPING
     if ( params.run.bam_qc_post_mapping ) {
@@ -259,7 +260,7 @@ workflow ASAP {
     }
     
     if ( params.run.vcf_variant_annotation ) {
-        VCF_VARIANT_ANNOTATION( ch_vcfs )
+        VCF_VARIANT_ANNOTATION( ch_vcfs, ch_fasta )
 
         ch_vcf_tbi = VCF_VARIANT_ANNOTATION.out.vcf_tbi
 
