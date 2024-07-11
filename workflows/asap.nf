@@ -79,6 +79,10 @@ workflow ASAP {
         other: true
     }
 
+    // Assign the other type of bam and cram files 
+    ch_other_bam_bai = ch_bam_types.other
+    //ch_other_cram_crai = ch_cram_types.other
+
     // FASTQ QC PRE MAPPING
     if ( params.run.fastq_qc_pre_mapping ) {
         FASTQ_QC_PRE_MAPPING( ch_input_type.fastq )    
@@ -104,7 +108,7 @@ workflow ASAP {
         ch_versions = ch_versions.mix( BAM_MERGE.out.versions.first() )
 
         // Add non dedupped bams files to the "other" channel
-        ch_other_bam_bai = ch_bam_types.other.mix( BAM_MERGE.out.bam.join( BAM_MERGE.out.bai ) )
+        ch_other_bam_bai = ch_other_bam_bai.mix( BAM_MERGE.out.bam.join( BAM_MERGE.out.bai ) )
     }
     
     // MARK DUPLICATES
