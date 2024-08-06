@@ -2,6 +2,7 @@
 // VCF VARIANT ANNOTATION
 
 // Include nf-core subworkflows
+include { TABIX_BGZIP } from '../../../modules/nf-core/tabix/bgzip/main.nf'
 include { VCF_ANNOTATE_SNPEFF } from '../../../subworkflows/nf-core/vcf_annotate_snpeff/main'
 include { VCF_ANNOTATE_ENSEMBLVEP} from '../../../subworkflows/nf-core/vcf_annotate_ensemblvep/main'
 
@@ -45,7 +46,10 @@ workflow VCF_VARIANT_ANNOTATION {
       }
 
       if (tool == "vep" ) {
-        ch_vep_vcf = ch_vcf.map{ meta, vcf -> 
+        // unzip input to avoid broken pipe error: 
+        TABIX_BGZIP( ch_vcf )
+        ch_vep_vcf = TABIX_BGZIP.out.output
+        ch_vep_vcf = ch_vep_vcf.map{ meta, vcf -> 
           meta = meta + [ann: "vep" ]
           meta.id = meta.id+".vep"
           [ meta, vcf, [] ]

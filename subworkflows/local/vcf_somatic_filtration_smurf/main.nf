@@ -122,8 +122,6 @@ workflow VCF_SOMATIC_FILTRATION_SMURF {
               [ [ id: file(meta.id).getBaseName()+".SMuRF" ], vcf_file ]
           }
           .groupTuple()
-      
-      ch_filtered_vcfs.view()
 
       SNPSIFT_JOIN_SMURF_FILTERED_VCFS( ch_filtered_vcfs )
 
