@@ -20,7 +20,7 @@ workflow VCF_SOMATIC_FILTRATION_SMURF {
   main:
     ch_input = ch_vcf_tbi
       .map{ meta, vcf, tbi ->
-        meta.split = true
+        meta = meta + [ split: true ]
         [ meta, vcf ]
       }
 
