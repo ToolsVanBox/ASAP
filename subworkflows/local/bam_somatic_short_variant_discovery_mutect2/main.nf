@@ -39,6 +39,7 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2 {
             }
             .groupTuple()
 
+        // Group tumor and normal samples while adding meta info 
         ch_input_mutect2 = ch_bam_bai_tumor
             .map{ meta, bam, bai ->
             [ [ id: meta.run_id, run_id: meta.run_id ], bam, bai ]
@@ -58,9 +59,12 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2 {
             .combine( ch_normal_ids )
             .map{ meta, bam, bai, interval, meta2, normal_ids ->
                 meta = meta + [ normal_ids: normal_ids ]
+                meta = meta + [ calling_type: "somatic" ] 
+                meta = meta + [ short_variant_caller: "mutect2" ]
                 [ meta, bam, bai, interval ]
             }
 
+        // Run mutect2 and merge output 
         MUTECT2( ch_input_mutect2, ch_fasta, ch_fai, ch_dict, germline_resource, germline_resource_tbi, pon, pon_tbi )
         ch_versions = ch_versions.mix(MUTECT2.out.versions)
         
@@ -86,6 +90,7 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2 {
         MERGEMUTECTSTATS(ch_merge_mutect2_stats)   
         ch_versions = ch_versions.mix(MERGEMUTECTSTATS.out.versions)
 
+        // Get all the pileups 
         ch_pileup_tumor_input = ch_bam_bai_tumor
             .combine( ch_split_intervals )
             .map { meta, bam, bai, meta2, interval_file ->
@@ -129,7 +134,8 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2 {
         GATHERPILEUPSUMMARIES_NORMAL( ch_gather_pileup_sum_normal, dict )  
         ch_versions = ch_versions.mix(GATHERPILEUPSUMMARIES_TUMOR.out.versions)
         ch_versions = ch_versions.mix(GATHERPILEUPSUMMARIES_NORMAL.out.versions)
-                
+        
+        // Learn the orientation model
         ch_learnorientationmodel = MUTECT2.out.f1r2
             .map{ meta, f1r2_file -> 
                 meta = meta - meta.subMap("id","interval","normal_ids")
@@ -141,9 +147,17 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2 {
         LEARNREADORIENTATIONMODEL( ch_learnorientationmodel )
         ch_versions = ch_versions.mix(LEARNREADORIENTATIONMODEL.out.versions)
 
+        ch_learnorientationmodel_artifactprior = LEARNREADORIENTATIONMODEL.out.artifactprior
+            .map{ meta, arti -> 
+                meta = meta - meta.subMap("id")
+                meta = meta + [ id: meta.run_id ]
+                [meta, arti]
+            }
+
         ch_pileup_tumor = GATHERPILEUPSUMMARIES_TUMOR.out.table
         ch_pileup_normal = GATHERPILEUPSUMMARIES_NORMAL.out.table
 
+        // Calculate the contamination in the sample
         ch_calculate_cont = ch_pileup_tumor
             .combine( ch_pileup_normal )
             .map{ meta, tumor_table, meta2, normal_table ->
@@ -159,80 +173,48 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2 {
 
         ch_segmentation_output = CALCULATECONTAMINATION.out.segmentation
             .map{ meta, segm ->
-                [ [id: meta.run_id, run_id: meta.run_id ], segm ]
+                [ [id: meta.run_id, run_id: meta.run_id, calling_type: "somatic", short_variant_caller: "mutect2" ], segm ]
             }
             .groupTuple()
         
         ch_contamination_output = CALCULATECONTAMINATION.out.contamination
             .map{ meta, cont ->
-                [ [id: meta.run_id, run_id: meta.run_id ], cont ]
+                [ [id: meta.run_id, run_id: meta.run_id, calling_type: "somatic", short_variant_caller: "mutect2" ], cont ]
             }
             .groupTuple()
         
+        // Filter mutect vcf file 
         ch_filter_mutect = MERGE_MUTECT2.out.vcf
             .join( MERGE_MUTECT2.out.tbi )
             .join( MERGEMUTECTSTATS.out.stats )
-            .join( LEARNREADORIENTATIONMODEL.out.artifactprior )
+            .join( ch_learnorientationmodel_artifactprior )
             .join( ch_segmentation_output )
             .join( ch_contamination_output )
 
-    // //     vcf_to_filter = vcf.join(tbi, failOnDuplicate: true, failOnMismatch: true)
-    // //     .join(stats, failOnDuplicate: true, failOnMismatch: true)
-    // //     .join(LEARNREADORIENTATIONMODEL.out.artifactprior, failOnDuplicate: true, failOnMismatch: true)
-    // //     .join(CALCULATECONTAMINATION.out.segmentation, failOnDuplicate: true, failOnMismatch: true)
-    // //     .join(CALCULATECONTAMINATION.out.contamination, failOnDuplicate: true, failOnMismatch: true)
-    // //     .map{ meta, vcf, tbi, stats, orientation, seg, cont -> [ meta, vcf, tbi, stats, orientation, seg, cont, [] ] }
+        ch_filter_mutect2 = ch_filter_mutect.map{ meta, vcf, tbi, stats, orientation, seg, cont -> 
+        meta.id = meta.id+".filt_mutect2"
+        [ meta, vcf, tbi, stats, orientation, seg, cont, [] ] }
 
-    FILTERMUTECTCALLS(ch_filter_mutect, ch_fasta, ch_fai, ch_dict)
-    ch_versions   = ch_versions.mix(FILTERMUTECTCALLS.out.versions)
-
-    // // vcf_filtered = FILTERMUTECTCALLS.out.vcf
-    // //     // add variantcaller to meta map
-    // //     .map{ meta, vcf -> [ meta + [ variantcaller:'mutect2' ], vcf ] }
-    //     // //
-    //     // // Mutect2 calls filtered by filtermutectcalls using the artifactpriors, contamination and segmentation tables.
-    //     // //
-    //     // ch_vcf           = MUTECT2.out.vcf.collect()
-    //     // ch_tbi           = MUTECT2.out.tbi.collect()
-    //     // ch_stats         = MUTECT2.out.stats.collect()
-    //     // ch_orientation   = LEARNREADORIENTATIONMODEL.out.artifactprior.collect()
-    //     // ch_segment       = CALCULATECONTAMINATION.out.segmentation.collect()
-    //     // ch_contamination = CALCULATECONTAMINATION.out.contamination.collect()
-
-    //     // //[] is used as a placeholder for optional input to specify the contamination estimate as a value, since the contamination table is used, this is not needed.
-    //     // ch_contamination.add([])
-    //     // ch_filtermutect_in = ch_vcf
-    //     //     .join(ch_tbi, failOnDuplicate: true, failOnMismatch: true)
-    //     //     .join(ch_stats, failOnDuplicate: true, failOnMismatch: true)
-    //     //     .join(ch_orientation, failOnDuplicate: true, failOnMismatch: true)
-    //     //     .join(ch_segment, failOnDuplicate: true, failOnMismatch: true)
-    //     //     .join(ch_contamination, failOnDuplicate: true, failOnMismatch: true)
-
-    //     // FILTERMUTECTCALLS (
-    //     //     ch_filtermutect_in,
-    //     //     ch_fasta,
-    //     //     ch_fai,
-    //     //     ch_dict
-    //     // )
-    //     // ch_versions = ch_versions.mix(FILTERMUTECTCALLS.out.versions.first())
+        FILTERMUTECTCALLS(ch_filter_mutect2, ch_fasta, ch_fai, ch_dict)
+        ch_versions   = ch_versions.mix(FILTERMUTECTCALLS.out.versions)
 
     emit:
-        // mutect2_vcf            = MUTECT2.out.vcf.collect()                             // channel: [ val(meta), path(vcf) ]
-        // mutect2_tbi            = MUTECT2.out.tbi.collect()                             // channel: [ val(meta), path(tbi) ]
-        // mutect2_stats          = MUTECT2.out.stats.collect()                           // channel: [ val(meta), path(stats) ]
-        // mutect2_f1r2           = MUTECT2.out.f1r2.collect()                            // channel: [ val(meta), path(f1r2) ]
+        mutect2_vcf            = MUTECT2.out.vcf.collect()                             // channel: [ val(meta), path(vcf) ]
+        mutect2_tbi            = MUTECT2.out.tbi.collect()                             // channel: [ val(meta), path(tbi) ]
+        mutect2_stats          = MUTECT2.out.stats.collect()                           // channel: [ val(meta), path(stats) ]
+        mutect2_f1r2           = MUTECT2.out.f1r2.collect()                            // channel: [ val(meta), path(f1r2) ]
 
-        // artifact_priors        = LEARNREADORIENTATIONMODEL.out.artifactprior.collect() // channel: [ val(meta), path(artifactprior) ]
+        artifact_priors        = LEARNREADORIENTATIONMODEL.out.artifactprior.collect() // channel: [ val(meta), path(artifactprior) ]
 
-        // pileup_table_tumor     = GETPILEUPSUMMARIES_TUMOR.out.table.collect()          // channel: [ val(meta), path(table) ]
-        // pileup_table_normal    = GETPILEUPSUMMARIES_NORMAL.out.table.collect()         // channel: [ val(meta), path(table) ]
+        pileup_table_tumor     = GETPILEUPSUMMARIES_TUMOR.out.table.collect()          // channel: [ val(meta), path(table) ]
+        pileup_table_normal    = GETPILEUPSUMMARIES_NORMAL.out.table.collect()         // channel: [ val(meta), path(table) ]
 
-        // contamination_table    = CALCULATECONTAMINATION.out.contamination.collect()    // channel: [ val(meta), path(table) ]
-        // segmentation_table     = CALCULATECONTAMINATION.out.segmentation.collect()     // channel: [ val(meta), path(table) ]
+        contamination_table    = CALCULATECONTAMINATION.out.contamination.collect()    // channel: [ val(meta), path(table) ]
+        segmentation_table     = CALCULATECONTAMINATION.out.segmentation.collect()     // channel: [ val(meta), path(table) ]
 
-        // filtered_vcf           = FILTERMUTECTCALLS.out.vcf.collect()                   // channel: [ val(meta), path(vcf) ]
-        // filtered_tbi           = FILTERMUTECTCALLS.out.tbi.collect()                   // channel: [ val(meta), path(tbi) ]
-        // filtered_stats         = FILTERMUTECTCALLS.out.stats.collect()                 // channel: [ val(meta), path(stats) ]
+        filtered_vcf           = FILTERMUTECTCALLS.out.vcf.collect()                   // channel: [ val(meta), path(vcf) ]
+        filtered_tbi           = FILTERMUTECTCALLS.out.tbi.collect()                   // channel: [ val(meta), path(tbi) ]
+        filtered_stats         = FILTERMUTECTCALLS.out.stats.collect()                 // channel: [ val(meta), path(stats) ]
 
         versions               = ch_versions                                           // channel: [ path(versions.yml) ]
 }
