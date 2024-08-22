@@ -49,7 +49,6 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
     GATK4_HAPLOTYPECALLER( ch_bam_interval, fasta, fai, dict, dbsnp, dbsnp_tbi )
     ch_versions = ch_versions.mix( GATK4_HAPLOTYPECALLER.out.versions )  
 
-    // GATK4_HAPLOTYPECALLER.out.vcf.view()
     // IF ONE MAPPER AND MARKDUP
     ch_genomicsdbimport = GATK4_HAPLOTYPECALLER.out.vcf
       .join( GATK4_HAPLOTYPECALLER.out.tbi )
@@ -61,28 +60,6 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
         [ [id: "${meta[0].run_id}.${interval_id}", run_id: meta[0].run_id ], gvcf, tbi, intervals, [], [] ]
       }
       GATK4_GENOMICSDBIMPORT( ch_genomicsdbimport, false, false, false )
-
-    // println "1"
-    // ch_genomicsdbimport.view()
-
-    //   // IF MULTIPLE MAPPERS AND/OR MARKDUP
-    // ch_genomicsdbimport = ch_genomicsdbimport
-    //   .map{ meta, vcf, tbi, intervals, x, y ->
-    //     vcfs = vcf.toList()
-    //     m = meta.id =~ /.(\d+)$/
-    //     def interval_id = m[0][1]
-    //     for ( v in vcfs ) {
-    //       sample_map_file = file("sample_map.${interval_id}.txt")
-    //       // if ( ! sample_map_file.exists() ) {
-    //         sample_map_file.append( v.getName().toString().replaceAll(/.\d+.vcf.gz$/,"") + "\t" + v + "\n" )          
-    //       // }
-    //     }
-    //     [ meta, sample_map_file, [], intervals, [], [] ]
-    //   }
-
-    // println "2"
-    // ch_genomicsdbimport.view()
-    // GATK4_GENOMICSDBIMPORT( ch_genomicsdbimport, false, false, true )
 
     ch_versions = ch_versions.mix( GATK4_GENOMICSDBIMPORT.out.versions )  
 
@@ -100,7 +77,7 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
 
     ch_mergevcfs_genotypegvcfs = BCFTOOLS_SORT.out.vcf
       .map{ meta, vcf -> 
-        [ [ id:meta.run_id, calling_type:"germline", caller:"gatk4haplotypecaller" ], vcf ]
+        [ [ id:meta.run_id, calling_type:"germline", short_variant_caller:"gatk4haplotypecaller" ], vcf ]
       }
       .groupTuple()
 
@@ -169,10 +146,6 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
 
     ch_merge_vqsr = GATK4_APPLYVQSR_INDEL.out.vcf
       .groupTuple()
-    
-    // ch_merge_vqsr = GATK4_APPLYVQSR_SNP.out.vcf
-    //   .mix( GATK4_APPLYVQSR_INDEL.out.vcf )     
-    //   .groupTuple()
 
     GATK4_MERGEVCFS_VQSR( ch_merge_vqsr, ch_dict )
     ch_versions = ch_versions.mix( GATK4_MERGEVCFS_VQSR.out.versions )  
