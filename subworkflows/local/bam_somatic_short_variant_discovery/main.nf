@@ -27,7 +27,10 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY {
 
       if ( tool == "mutect2" ) {
         BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2( ch_bam_bai_tumor, ch_bam_bai_normal, ch_split_interval, ch_fasta, ch_fai, ch_dict )
+        
         ch_versions = ch_versions.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.versions )
+        ch_somatic_vcfs = ch_somatic_vcfs.mix(BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.filtered_vcf)
+        ch_somatic_tbi = ch_somatic_tbi.mix(BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.filtered_tbi)
 
         known_tool = true
       }

@@ -183,7 +183,6 @@ workflow ASAP {
 
         ch_vcfs = ch_vcfs.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.vcf )
         ch_tbi = ch_tbi.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.tbi )
-
     }
 
     if ( params.run.bam_germline_copy_number_discovery ) {
@@ -228,8 +227,8 @@ workflow ASAP {
         BAM_SOMATIC_SHORT_VARIANT_DISCOVERY( ch_bam_bai_sample_type.tumor, ch_bam_bai_sample_type.normal, ch_split_intervals, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.versions )
         
-        // ch_vcfs = ch_vcfs.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.vcf )
-        // ch_tbi = ch_tbi.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.tbi )
+        ch_vcfs = ch_vcfs.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.vcf )
+        ch_tbi = ch_tbi.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.tbi )
     }
     
     // Tumor-only
