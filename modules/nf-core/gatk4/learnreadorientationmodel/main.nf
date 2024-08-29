@@ -29,10 +29,10 @@ process GATK4_LEARNREADORIENTATIONMODEL {
         avail_mem = (task.memory.mega*0.8).intValue()
     }
     """
-    gatk --java-options "-Xmx${avail_mem}M -XX:-UsePerfData" LearnReadOrientationModel \\
+    gatk --java-options "-Xmx${avail_mem}M -XX:-UsePerfData -Djava.io.tmpdir=\$TMPDIR" LearnReadOrientationModel \\
         $input_list \\
         --output ${prefix}.tar.gz \\
-        --tmp-dir . \\
+        --tmp-dir \$TMPDIR \\
         $args
 
     cat <<-END_VERSIONS > versions.yml
