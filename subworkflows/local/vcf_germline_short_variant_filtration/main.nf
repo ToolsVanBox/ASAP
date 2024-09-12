@@ -2,11 +2,11 @@
 // VCF VARIANT FILTRATION
 
 // Include local subworkflows
-include { VCF_VARIANT_FILTRATION_GATK4 } from '../../../subworkflows/local/vcf_variant_filtration_gatk4/main'
+include { VCF_GERMLINE_SHORT_VARIANT_FILTRATION_GATK4 } from '../../../subworkflows/local/vcf_germline_short_variant_filtration_gatk4/main'
 
 // Include nf-core modules
 
-workflow VCF_VARIANT_FILTRATION {
+workflow VCF_GERMLINE_SHORT_VARIANT_FILTRATION {
   take:
     ch_vcf_tbi  // channel: [ meta, path(vcf), path(tbi) ]
     ch_fasta // channel: [ val(meta), path(fasta) ]
@@ -18,17 +18,17 @@ workflow VCF_VARIANT_FILTRATION {
     ch_vcfs = Channel.empty()
     ch_tbi = Channel.empty()
 
-    for ( tool in params.vcf_variant_filtration.tool ) {
+    for ( tool in params.vcf_germline_short_variant_filtration.tool ) {
       tool = tool.toLowerCase()      
       known_tool = false    
 
       if ( tool == "gatk4" ) {
         
-        VCF_VARIANT_FILTRATION_GATK4( ch_vcf_tbi, ch_fasta, ch_fai, ch_dict )
-        ch_versions = ch_versions.mix( VCF_VARIANT_FILTRATION_GATK4.out.versions )
+        VCF_GERMLINE_SHORT_VARIANT_FILTRATION_GATK4( ch_vcf_tbi, ch_fasta, ch_fai, ch_dict )
+        ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_FILTRATION_GATK4.out.versions )
 
-        ch_vcfs = ch_vcfs.mix( VCF_VARIANT_FILTRATION_GATK4.out.vcf )
-        ch_tbi = ch_tbi.mix( VCF_VARIANT_FILTRATION_GATK4.out.tbi )
+        ch_vcfs = ch_vcfs.mix( VCF_GERMLINE_SHORT_VARIANT_FILTRATION_GATK4.out.vcf )
+        ch_tbi = ch_tbi.mix( VCF_GERMLINE_SHORT_VARIANT_FILTRATION_GATK4.out.tbi )
       
         known_tool = true
       }

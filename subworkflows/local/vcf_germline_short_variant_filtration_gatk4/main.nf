@@ -4,7 +4,7 @@
 // Include nf-core modules
 include { GATK4_VARIANTFILTRATION } from '../../../modules/nf-core/gatk4/variantfiltration/main'
 
-workflow VCF_VARIANT_FILTRATION_GATK4 {
+workflow VCF_GERMLINE_SHORT_VARIANT_FILTRATION_GATK4 {
   take:
     ch_vcf_tbi  // channel: [ meta, path(vcf), path(tbi) ]
     ch_fasta // channel: [ val(meta), path(fasta) ]
