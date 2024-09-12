@@ -25,11 +25,12 @@ include { BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY } from '../subworkflows/local
 include { BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY } from '../subworkflows/local/bam_tumoronly_structural_variant_discovery/main.nf'
 include { BAM_TUMORONLY_COPY_NUMBER_DISCOVERY } from '../subworkflows/local/bam_tumoronly_copy_number_discovery/main.nf'
 
-include { VCF_VARIANT_FILTRATION } from '../subworkflows/local/vcf_variant_filtration/main.nf'
-include { VCF_VARIANT_ANNOTATION } from '../subworkflows/local/vcf_variant_annotation/main.nf'
+include { VCF_GERMLINE_SHORT_VARIANT_FILTRATION } from '../subworkflows/local/vcf_germline_short_variant_filtration/main.nf'
+include { VCF_SOMATIC_SHORT_VARIANT_FILTRATION } from '../subworkflows/local/vcf_somatic_short_variant_filtration/main.nf'
+include { VCF_SHORT_VARIANT_ANNOTATION } from '../subworkflows/local/vcf_short_variant_annotation/main.nf'
 include { VCF_STRUCTURAL_VARIANT_FILTRATION } from '../subworkflows/local/vcf_structural_variant_filtration/main.nf'
 
-include { VCF_SOMATIC_FILTRATION } from '../subworkflows/local/vcf_somatic_filtration/main.nf'
+include { VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION } from '../subworkflows/local/vcf_germline_short_variant_somatic_filtration/main.nf'
  
 // Include nf-core modules
 include { GATK4_SPLITINTERVALS } from '../modules/nf-core/gatk4/splitintervals/main'                                                                          
@@ -48,8 +49,12 @@ workflow ASAP {
     ch_versions = Channel.empty()
     ch_bam_bai = Channel.empty()
     ch_other_bam_bai = Channel.empty()
-    ch_vcfs = Channel.empty()
-    ch_tbi = Channel.empty()    
+    ch_germline_vcfs = Channel.empty()
+    ch_germline_tbi = Channel.empty()
+    ch_somatic_vcfs = Channel.empty()
+    ch_somatic_tbi = Channel.empty() 
+    ch_input_annotation_vcfs = Channel.empty()
+    ch_annotation_vcf_tbi = Channel.empty()
     
     // Define variables
     def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
@@ -181,8 +186,19 @@ workflow ASAP {
         BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( ch_bam_bai, ch_split_intervals, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.versions )
 
-        ch_vcfs = ch_vcfs.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.vcf )
-        ch_tbi = ch_tbi.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.tbi )
+        ch_germline_vcfs = BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.vcf 
+        ch_germline_tbi = BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.tbi 
+        // Variant filtration
+        if ( params.run.vcf_germline_short_variant_filtration ) {
+            ch_germline_variant_filtration = ch_germline_vcfs
+                .join( ch_germline_tbi )
+
+            VCF_GERMLINE_SHORT_VARIANT_FILTRATION( ch_germline_variant_filtration, ch_fasta, ch_fai, ch_dict )
+            ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_FILTRATION.out.versions )
+
+            ch_germline_vcfs = VCF_GERMLINE_SHORT_VARIANT_FILTRATION.out.vcf
+            ch_germline_tbi = VCF_GERMLINE_SHORT_VARIANT_FILTRATION.out.tbi
+        }
     }
 
     if ( params.run.bam_germline_copy_number_discovery ) {
@@ -223,12 +239,33 @@ workflow ASAP {
         ch_versions = ch_versions.mix( BAM_SOMATIC_COPY_NUMBER_DISCOVERY.out.versions )
     }
 
+    // Somatic short variant discovery 
     if ( params.run.bam_somatic_short_variant_discovery ) {
         BAM_SOMATIC_SHORT_VARIANT_DISCOVERY( ch_bam_bai_sample_type.tumor, ch_bam_bai_sample_type.normal, ch_split_intervals, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.versions )
         
-        ch_vcfs = ch_vcfs.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.vcf )
-        ch_tbi = ch_tbi.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.tbi )
+        ch_somatic_vcfs = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.vcf 
+        ch_somatic_tbi = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.tbi 
+        ch_somatic_f1r2 = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.f1r2 
+        ch_somatic_stats = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.stats 
+
+        // Variant filtration 
+        if ( params.run.vcf_somatic_short_variant_filtration ) {
+            //ch_somatic_short_variant_filtration = ch_somatic_vcfs
+            //    .join( ch_somatic_tbi )
+            // This needs adjustment
+            // This needs adjustment
+            // This needs adjustment
+            VCF_SOMATIC_SHORT_VARIANT_FILTRATION(ch_somatic_vcfs, ch_somatic_tbi, ch_somatic_f1r2, ch_somatic_stats, ch_bam_bai_sample_type.tumor, ch_bam_bai_sample_type.normal, ch_split_intervals, ch_fasta, ch_fai, ch_dict  )
+            ch_versions = ch_versions.mix( VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.versions )
+
+            ch_somatic_vcfs = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.vcf
+            ch_somatic_tbi = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.tbi
+            //ch_somatic_f1r2 = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.f1r2
+            // This needs adjustment
+            // This needs adjustment
+            // This needs adjustment
+        }
     }
     
     // Tumor-only
@@ -250,23 +287,17 @@ workflow ASAP {
         ch_versions = ch_versions.mix( BAM_TUMORONLY_COPY_NUMBER_DISCOVERY.out.versions )
     }
     
+    // Short variant annotation 
+    if ( params.run.vcf_short_variant_annotation ) {
+        if (params.run.bam_germline_short_variant_discovery){
+            ch_input_annotation_vcfs = ch_input_annotation_vcfs.mix(ch_germline_vcfs)
+        }
+        if (params.run.bam_somatic_short_variant_discovery){
+            ch_input_annotation_vcfs = ch_input_annotation_vcfs.mix(ch_somatic_vcfs)
+        }
 
-    // Variant filtration
-    if ( params.run.vcf_variant_filtration ) {
-        ch_variant_filtration = ch_vcfs
-            .join( ch_tbi )
-
-        VCF_VARIANT_FILTRATION( ch_variant_filtration, ch_fasta, ch_fai, ch_dict )
-        ch_versions = ch_versions.mix( VCF_VARIANT_FILTRATION.out.versions )
-
-        ch_vcfs = VCF_VARIANT_FILTRATION.out.vcf
-    }
-    
-    if ( params.run.vcf_variant_annotation ) {
-        VCF_VARIANT_ANNOTATION( ch_vcfs, ch_fasta )
-
-        ch_vcf_tbi = VCF_VARIANT_ANNOTATION.out.vcf_tbi
-
+        VCF_SHORT_VARIANT_ANNOTATION( ch_input_annotation_vcfs, ch_fasta )
+        ch_annotation_vcf_tbi = VCF_SHORT_VARIANT_ANNOTATION.out.vcf_tbi
     }
 
     // Structural variant filtration
@@ -277,17 +308,16 @@ workflow ASAP {
     }
 
     // Somatic filtering
-    if ( params.run.vcf_somatic_filtration ) {
-        ch_germline_vcf_tbi = ch_vcf_tbi
+    if ( params.run.vcf_germline_short_variant_somatic_filtration ) {
+        ch_germline_vcf_tbi = ch_annotation_vcf_tbi
             .map{ meta, vcf, tbi ->
                 if ( meta.calling_type == "germline" ) {
                     [ meta, vcf, tbi]
                 }
             }
         
-        VCF_SOMATIC_FILTRATION( ch_germline_vcf_tbi, ch_bam_bai )
-        ch_versions = ch_versions.mix( VCF_SOMATIC_FILTRATION.out.versions )
-
+        VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION( ch_germline_vcf_tbi, ch_bam_bai )
+        ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.versions )
     }
 
     
