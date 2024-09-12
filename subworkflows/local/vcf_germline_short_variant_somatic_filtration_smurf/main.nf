@@ -12,7 +12,7 @@ include { TABIX_BGZIPTABIX } from '../../../modules/nf-core/tabix/bgziptabix/mai
 include { SNPSIFT_SPLIT as SNPSIFT_JOIN_SMURF_FILTERED_VCFS } from '../../../modules/nf-core/snpsift/split/main.nf'
 include { SNPSIFT_SPLIT as SNPSIFT_JOIN_SMURF_VCFS } from '../../../modules/nf-core/snpsift/split/main.nf'
 
-workflow VCF_SOMATIC_FILTRATION_SMURF {
+workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
   take:
     ch_vcf_tbi  // channel: [ meta, path(vcf), path(tbi) ]
     ch_bam_bai // channel: [ meta, path(bam), path(bai) ]

@@ -2,11 +2,11 @@
 // VCF SOMATIC FILTRATION
 
 // Include local subworkflows
-include { VCF_SOMATIC_FILTRATION_SMURF } from '../../../subworkflows/local/vcf_somatic_filtration_smurf/main'
+include { VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF } from '../../../subworkflows/local/vcf_germline_short_variant_somatic_filtration_smurf/main'
 
 // Include nf-core modules
 
-workflow VCF_SOMATIC_FILTRATION {
+workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION {
   take:
     ch_vcf_tbi  // channel: [ meta, path(vcf), path(tbi) ]
     ch_bam_bai // channel: [ meta, bam, bai ]
@@ -14,14 +14,14 @@ workflow VCF_SOMATIC_FILTRATION {
   main:
     ch_versions = Channel.empty()
 
-    for ( tool in params.vcf_somatic_filtration.tool ) {
+    for ( tool in params.vcf_germline_short_variant_somatic_filtration.tool ) {
       tool = tool.toLowerCase()      
       known_tool = false 
 
       if ( tool == "smurf" ) {
         
-        VCF_SOMATIC_FILTRATION_SMURF( ch_vcf_tbi, ch_bam_bai )
-        // ch_versions = ch_versions.mix( VCF_SOMATIC_FILTRATION_SMURF.out.versions )
+        VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF( ch_vcf_tbi, ch_bam_bai )
+        // ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF.out.versions )
         
         known_tool = true
       }
