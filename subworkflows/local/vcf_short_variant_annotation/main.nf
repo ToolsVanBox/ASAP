@@ -8,7 +8,7 @@ include { VCF_ANNOTATE_ENSEMBLVEP} from '../../../subworkflows/nf-core/vcf_annot
 
 // Include nf-core modules
 
-workflow VCF_VARIANT_ANNOTATION {
+workflow VCF_SHORT_VARIANT_ANNOTATION {
   take:
     ch_vcf  // channel: [ meta, path(vcf) ]
     ch_fasta // channel: [ meta, path(fasta) ]
@@ -28,7 +28,7 @@ workflow VCF_VARIANT_ANNOTATION {
     ch_snpeff_cache = Channel.value( snpeff_cache )
           .map{ cache -> [ [ id:'snpeff_cache' ], cache ] }
 
-    for ( tool in params.vcf_variant_annotation.tool ) {
+    for ( tool in params.vcf_short_variant_annotation.tool ) {
       tool = tool.toLowerCase()      
       known_tool = false    
 
