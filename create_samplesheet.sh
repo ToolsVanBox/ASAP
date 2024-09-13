@@ -34,7 +34,7 @@ for BAM in ${BAMS[@]}; do
 	SAMPLE=$( echo $(basename ${BAM}) | cut -f1 -d'_')
 	BAI=${BAM}.bai
 	if [[ ! -f ${BAI} ]]; then
-		BAI=${BAM/.bam/bai}
+		BAI=${BAM/.bam/.bai}
 	fi
 	if [[ ! -f ${BAI} ]]; then
 		echo "NO BAI FILE FOUND FOR ${SAMPLE}"
