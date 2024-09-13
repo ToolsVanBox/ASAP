@@ -1,6 +1,7 @@
 process CONTROLFREEC_MAKEKARYOTYPE {
     tag "$meta.id"
     label 'process_low'
+    container = 'docker://vanboxtelbioinformatics/asap_r:1.0'
 
     input:
     tuple val(meta), path(ratio)
@@ -19,7 +20,7 @@ process CONTROLFREEC_MAKEKARYOTYPE {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
-    R --slave --file=${baseDir}/modules/local/controlfreec/makekaryotype/bin/plotkaryotype.R --args ${ploidy} ${maxLevelToPlot} ${binsize} ${ratio} ${prefix}
+    R --slave --file=/ASAP_R/plotkaryotype.R --args ${ploidy} ${maxLevelToPlot} ${binsize} ${ratio} ${prefix}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -1,6 +1,8 @@
 process FINGERPRINT_HEATMAP {
     tag "$meta.id"
-    label 'process_low'
+    label 'process_single'
+    container = 'docker://vanboxtelbioinformatics/asap_r:1.0'
+
 
     input:
     tuple val(meta), path(vcf)
@@ -17,7 +19,7 @@ process FINGERPRINT_HEATMAP {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
-    R --slave --file=${baseDir}/modules/local/fingerprint/heatmap/bin/fingerprintheatmap.R --args ${input_vcfs} ${prefix}
+    R --slave --file=/ASAP_R/fingerprintheatmap.R --args ${input_vcfs} ${prefix}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

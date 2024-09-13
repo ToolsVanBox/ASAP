@@ -1,6 +1,7 @@
 process CONTROLFREEC_MAKEBAFPLOT {
     tag "$meta.id"
     label 'process_low'
+    container = 'docker://vanboxtelbioinformatics/asap_r:1.0'
 
     input:
     tuple val(meta), path(baf)
@@ -17,7 +18,7 @@ process CONTROLFREEC_MAKEBAFPLOT {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
-    R --slave --file=${baseDir}/modules/local/controlfreec/makebafplot/bin/plotbaf.R --args ${baf} ${binsize} ${prefix}
+    R --slave --file=/ASAP_R/plotbaf.R --args ${baf} ${binsize} ${prefix}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
