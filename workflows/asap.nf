@@ -58,9 +58,9 @@ workflow ASAP {
     
     // Define variables
     def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
-    def fai = file( fasta.toString()+".fai", checkIfExists: true )
-    def fasta_dict = file( fasta.toString()+".dict", checkIfExists: true )
-    def dict = file( fasta.toString().replace(".fasta",".dict" ), checkIfExists: true )
+    def fai = file( params.genomes[params.genome].fai, checkIfExists: true )
+    def dict = file( params.genomes[params.genome].dict, checkIfExists: true )
+    def fasta_dict = file( params.genomes[params.genome].fasta_dict, checkIfExists: true )
     
     // Create channels of the variables
     ch_fasta = Channel.value( fasta )
@@ -251,20 +251,12 @@ workflow ASAP {
 
         // Variant filtration 
         if ( params.run.vcf_somatic_short_variant_filtration ) {
-            //ch_somatic_short_variant_filtration = ch_somatic_vcfs
-            //    .join( ch_somatic_tbi )
-            // This needs adjustment
-            // This needs adjustment
-            // This needs adjustment
             VCF_SOMATIC_SHORT_VARIANT_FILTRATION(ch_somatic_vcfs, ch_somatic_tbi, ch_somatic_f1r2, ch_somatic_stats, ch_bam_bai_sample_type.tumor, ch_bam_bai_sample_type.normal, ch_split_intervals, ch_fasta, ch_fai, ch_dict  )
             ch_versions = ch_versions.mix( VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.versions )
 
             ch_somatic_vcfs = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.vcf
             ch_somatic_tbi = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.tbi
-            //ch_somatic_f1r2 = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.f1r2
-            // This needs adjustment
-            // This needs adjustment
-            // This needs adjustment
+
         }
     }
     
