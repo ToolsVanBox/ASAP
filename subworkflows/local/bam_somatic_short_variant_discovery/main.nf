@@ -20,6 +20,8 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY {
     ch_versions = Channel.empty()
     ch_somatic_vcfs = Channel.empty()
     ch_somatic_tbi = Channel.empty()
+    ch_somatic_f1r2 = Channel.empty()
+    ch_somatic_stats = Channel.empty()
       
     for ( tool in params.bam_somatic_short_variant_discovery.tool ) {
       tool = tool.toLowerCase()      
@@ -29,8 +31,10 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY {
         BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2( ch_bam_bai_tumor, ch_bam_bai_normal, ch_split_interval, ch_fasta, ch_fai, ch_dict )
         
         ch_versions = ch_versions.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.versions )
-        ch_somatic_vcfs = ch_somatic_vcfs.mix(BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.filtered_vcf)
-        ch_somatic_tbi = ch_somatic_tbi.mix(BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.filtered_tbi)
+        ch_somatic_vcfs = ch_somatic_vcfs.mix(BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.vcf)
+        ch_somatic_tbi = ch_somatic_tbi.mix(BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.tbi)
+        ch_somatic_f1r2 = ch_somatic_f1r2.mix(BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.f1r2)
+        ch_somatic_stats = ch_somatic_stats.mix(BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2.out.stats)
 
         known_tool = true
       }
@@ -40,9 +44,11 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY {
       }
     }
   emit:
-    vcf = ch_somatic_vcfs // channel: [ meta, vcf ]
-    tbi = ch_somatic_tbi // channel: [ meta, tbi ]
-    versions = ch_versions // channel: [ versions.yml ]
+    vcf = ch_somatic_vcfs       // channel: [ meta, vcf ]
+    tbi = ch_somatic_tbi        // channel: [ meta, tbi ]
+    f1r2 = ch_somatic_f1r2      // channel: [ meta, path(f1r2) ]
+    stats = ch_somatic_stats    // channel: [ val(meta), path(stats) ]
+    versions = ch_versions      // channel: [ versions.yml ]
 }
 
 
