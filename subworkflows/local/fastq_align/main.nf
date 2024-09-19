@@ -25,7 +25,7 @@ workflow FASTQ_ALIGN {
       // Run BWA MEM 1
       if ( tool == "bwamem1" ) {
          
-          bwa_index_folder = new File("${params.genomes[params.genome].bwa}")
+          def bwa_index_folder = file( params.genomes[params.genome].bwa, checkIfExists: false )
           
           // Create BWA index if it does not exists
           if ( !bwa_index_folder.exists() ) {
@@ -62,8 +62,8 @@ workflow FASTQ_ALIGN {
       // Run BWA MEM 2
       if ( tool == "bwamem2" ) {
                     
-          bwamem2_index_folder = new File("${params.genomes[params.genome].bwamem2}")
-          
+          def bwamem2_index_folder = file( params.genomes[params.genome].bwamem2, checkIfExists: false )
+
           // Create BWA MEM 2 index if it does not exists
           if ( !bwamem2_index_folder.exists() ) {
             PREPARE_GENOME( ch_fasta, 'bwamem2' )
