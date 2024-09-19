@@ -249,8 +249,6 @@ workflow ASAP {
         ch_somatic_f1r2 = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.f1r2 
         ch_somatic_stats = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.stats 
 
-        ch_somatic_f1r2.view()
-
         // Variant filtration 
         if ( params.run.vcf_somatic_short_variant_filtration ) {
             VCF_SOMATIC_SHORT_VARIANT_FILTRATION(ch_somatic_vcfs, ch_somatic_tbi, ch_somatic_f1r2, ch_somatic_stats, ch_bam_bai_sample_type.tumor, ch_bam_bai_sample_type.normal, ch_split_intervals, ch_fasta, ch_fai, ch_dict  )
