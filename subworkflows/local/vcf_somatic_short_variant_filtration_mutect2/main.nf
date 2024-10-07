@@ -27,7 +27,7 @@ workflow VCF_SOMATIC_SHORT_VARIANT_FILTRATION_MUTECT2 {
         ch_versions = Channel.empty()
 
         def germline_resource = file( params.genomes[params.genome].somatic_germline_resource, checkIfExists: true )
-        def germline_resource_tbi = file( germline_resource.toString()+".tbi", checkIfExists: true )
+        def germline_resource_tbi = file( params.genomes[params.genome].somatic_germline_resource_tbi, checkIfExists: true )
         def dict = ch_dict.map{ meta, dict -> [ dict ] }
 
         // Get all the pileups 
