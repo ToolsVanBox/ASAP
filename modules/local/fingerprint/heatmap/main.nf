@@ -1,7 +1,11 @@
 process FINGERPRINT_HEATMAP {
     tag "$meta.id"
     label 'process_single'
-    container = 'docker://vanboxtelbioinformatics/asap_r:1.0'
+    // container = 'docker.io/vanboxtelbioinformatics/asap_r:1.0'
+
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'docker://vanboxtelbioinformatics/asap_r:1.0':
+        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/asap_r@sha256:5bbbea6cd507d9ffea2f9e6daa6a6ee2b1abd84528218d25628df6ace50d98a3' }"
 
 
     input:
