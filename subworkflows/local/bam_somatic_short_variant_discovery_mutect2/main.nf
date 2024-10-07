@@ -20,9 +20,9 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2 {
         ch_versions = Channel.empty()
         
         def germline_resource = file( params.genomes[params.genome].somatic_germline_resource, checkIfExists: true )
-        def germline_resource_tbi = file( germline_resource.toString()+".tbi", checkIfExists: true )
+        def germline_resource_tbi = file( params.genomes[params.genome].somatic_germline_resource_tbi, checkIfExists: true )
         def pon = file( params.genomes[params.genome].somatic_pon, checkIfExists: true )
-        def pon_tbi = file( pon.toString()+".tbi", checkIfExists: true )
+        def pon_tbi = file( params.genomes[params.genome].somatic_pon_tbi, checkIfExists: true )
         def dict = ch_dict.map{ meta, dict -> [ dict ] }
         
         ch_normal_ids = ch_bam_bai_normal
