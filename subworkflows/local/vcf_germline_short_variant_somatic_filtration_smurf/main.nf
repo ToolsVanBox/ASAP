@@ -24,6 +24,8 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
   main:
     ch_versions = Channel.empty()
     
+    def config = file( params.genomes[params.genome].smurf_config, checkIfExists: true )
+     
     ch_input = ch_vcf_tbi
       .map{ meta, vcf, tbi ->
         meta = meta + [ split: true ]
@@ -115,7 +117,7 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
     //       [ meta, vcf_file, tbi, bam, bai ]
     //   }
 
-      SMURF( ch_smurf )
+      SMURF( ch_smurf, config )
 
       ch_filtered_vcfs = SMURF.out.smurf_filtered_vcf
         .map{ meta, vcf_file -> 

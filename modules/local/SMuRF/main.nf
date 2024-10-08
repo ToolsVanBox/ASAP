@@ -1,10 +1,15 @@
 process SMURF {
   tag "$meta.id"
   label 'process_single'
-  container = 'docker://vanboxtelbioinformatics/smurf:3.0.2'
+  
+  container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'docker://vanboxtelbioinformatics/smurf:3.0.2':
+        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:3ea5c21b0aaf696dbdaadc851ada4fc82744ece9b03f139bca73a7299e215492' }"
+  // container = 'docker.io/vanboxtelbioinformatics/smurf:3.0.2'
 
   input:
     tuple val(meta), path(vcf), path(tbi), path(bams), path(bai)    
+    path( config )
 
   output:
     tuple val(meta), path("*SMuRF.vcf"), emit: smurf_vcf
@@ -18,7 +23,7 @@ process SMURF {
     n = meta.bulk_names ? ' -n ' + meta.bulk_names.join(' -n ') : ''
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def config = task.ext.config 
+    // def config = ${params.genomes[params.genome].smurf_config}
     
     """
     host=\$(hostname)
