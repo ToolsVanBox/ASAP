@@ -9,8 +9,12 @@ include { SMURF } from '../../../modules/local/SMuRF/main.nf'
 include { TABIX_BGZIP } from '../../../modules/nf-core/tabix/bgzip/main.nf'
 include { SNPSIFT_SPLIT } from '../../../modules/nf-core/snpsift/split/main.nf'
 include { TABIX_BGZIPTABIX } from '../../../modules/nf-core/tabix/bgziptabix/main.nf'
+include { TABIX_TABIX  as TABIX_SMURF } from '../../../modules/nf-core/tabix/tabix/main.nf'
+include { TABIX_TABIX  as TABIX_SMURF_FILTERED } from '../../../modules/nf-core/tabix/tabix/main.nf'
 include { SNPSIFT_SPLIT as SNPSIFT_JOIN_SMURF_FILTERED_VCFS } from '../../../modules/nf-core/snpsift/split/main.nf'
 include { SNPSIFT_SPLIT as SNPSIFT_JOIN_SMURF_VCFS } from '../../../modules/nf-core/snpsift/split/main.nf'
+include { BCFTOOLS_SORT as BCFTOOLS_SMURF_SORT} from '../../../modules/nf-core/bcftools/sort/main.nf'
+include { BCFTOOLS_SORT as BCFTOOLS_SMURF_FILTERED_SORT } from '../../../modules/nf-core/bcftools/sort/main.nf'
 
 workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
   take:
@@ -18,6 +22,8 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
     ch_bam_bai // channel: [ meta, path(bam), path(bai) ]
     
   main:
+    ch_versions = Channel.empty()
+    
     ch_input = ch_vcf_tbi
       .map{ meta, vcf, tbi ->
         meta = meta + [ split: true ]
@@ -123,11 +129,25 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
           }
           .groupTuple()
 
+      
+      
+      // Join, sort and tabix for the smurf filtered vcf
       SNPSIFT_JOIN_SMURF_FILTERED_VCFS( ch_filtered_vcfs )
+      BCFTOOLS_SMURF_FILTERED_SORT( SNPSIFT_JOIN_SMURF_FILTERED_VCFS.out.out_vcfs )
+      ch_versions = ch_versions.mix( BCFTOOLS_SMURF_FILTERED_SORT.out.versions )
 
+      // Join, sort and tabix for the smurf vcf
       SNPSIFT_JOIN_SMURF_VCFS( ch_smurf_vcfs )
+      BCFTOOLS_SMURF_SORT( SNPSIFT_JOIN_SMURF_VCFS.out.out_vcfs )
+      ch_versions = ch_versions.mix( BCFTOOLS_SMURF_SORT.out.versions )
 
-  // emit:
+      // Test tabix 
+      TABIX_SMURF_FILTERED( BCFTOOLS_SMURF_FILTERED_SORT.out.vcf )
+      TABIX_SMURF( BCFTOOLS_SMURF_SORT.out.vcf )
+      
+
+  emit:
+    versions = ch_versions // channel: [ versions.yml ]
     
 }
 
