@@ -31,6 +31,9 @@ include { VCF_SHORT_VARIANT_ANNOTATION } from '../subworkflows/local/vcf_short_v
 include { VCF_STRUCTURAL_VARIANT_FILTRATION } from '../subworkflows/local/vcf_structural_variant_filtration/main.nf'
 
 include { VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION } from '../subworkflows/local/vcf_germline_short_variant_somatic_filtration/main.nf'
+
+include { BAM_HLA_TYPE_CALLING } from '../subworkflows/local/bam_hla_type_calling/main.nf'
+
  
 // Include nf-core modules
 include { GATK4_SPLITINTERVALS } from '../modules/nf-core/gatk4/splitintervals/main'                                                                          
@@ -55,6 +58,11 @@ workflow ASAP {
     ch_somatic_tbi = Channel.empty() 
     ch_input_annotation_vcfs = Channel.empty()
     ch_annotation_vcf_tbi = Channel.empty()
+    ch_hla_vcf = Channel.empty()
+    ch_hla_sc_vcf = Channel.empty()
+    ch_hla_sf_vcf = Channel.empty()
+    ch_rna_bam = Channel.empty()
+    ch_cnv_dir = Channel.empty()
     
     // Define variables
     def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
@@ -181,7 +189,7 @@ workflow ASAP {
             }
     }
 
-    // Germline calling
+    // Germline short variant calling
     if ( params.run.bam_germline_short_variant_discovery ) {        
         BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( ch_bam_bai, ch_split_intervals, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.versions )
@@ -201,11 +209,13 @@ workflow ASAP {
         }
     }
 
+    // Germline copy number discovery 
     if ( params.run.bam_germline_copy_number_discovery ) {
         BAM_GERMLINE_COPY_NUMBER_DISCOVERY( ch_bam_bai, ch_fasta )
         ch_versions = ch_versions.mix( BAM_GERMLINE_COPY_NUMBER_DISCOVERY.out.versions )
     }   
 
+    // Germline structural variant discovery 
     if ( params.run.bam_germline_structural_variant_discovery ) {
         BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY( ch_bam_bai, ch_fasta, ch_fai, ch_fasta_dict )
         ch_versions = ch_versions.mix( BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
@@ -218,7 +228,7 @@ workflow ASAP {
         tumor: it[0].sample_type == "tumor"
     }
      
-    // Somatic calling
+    // Somatic calling input preparation 
     if ( params.run.bam_somatic_structural_variant_discovery || params.run.bam_somatic_copy_number_discovery || params.run.bam_somatic_short_variant_discovery ) {
         ch_bam_bai_normal_tumor = ch_bam_bai_sample_type.normal.ifEmpty( [ [], null, null ] )
                 .combine( ch_bam_bai_sample_type.tumor.ifEmpty( [ [], null, null ] ) )
@@ -229,11 +239,13 @@ workflow ASAP {
                 }       
     }
 
+    // Somatic structural variant discovery 
     if ( params.run.bam_somatic_structural_variant_discovery ) {                    
         BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY( ch_bam_bai_normal_tumor, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix( BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
     }
 
+    // Somatic copy number discovery 
     if ( params.run.bam_somatic_copy_number_discovery ) {                    
         BAM_SOMATIC_COPY_NUMBER_DISCOVERY( ch_bam_bai_sample_type.normal, ch_bam_bai_sample_type.tumor, ch_fasta )
         ch_versions = ch_versions.mix( BAM_SOMATIC_COPY_NUMBER_DISCOVERY.out.versions )
@@ -249,8 +261,6 @@ workflow ASAP {
         ch_somatic_f1r2 = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.f1r2 
         ch_somatic_stats = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.stats 
 
-        ch_somatic_f1r2.view()
-
         // Variant filtration 
         if ( params.run.vcf_somatic_short_variant_filtration ) {
             VCF_SOMATIC_SHORT_VARIANT_FILTRATION(ch_somatic_vcfs, ch_somatic_tbi, ch_somatic_f1r2, ch_somatic_stats, ch_bam_bai_sample_type.tumor, ch_bam_bai_sample_type.normal, ch_split_intervals, ch_fasta, ch_fai, ch_dict  )
@@ -258,8 +268,10 @@ workflow ASAP {
 
             ch_somatic_vcfs = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.vcf
             ch_somatic_tbi = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.tbi
-
         }
+
+        // Assign hla vcf to be the somatic vcf (Double check if this takes along the filtration step)
+        ch_hla_sc_vcf = ch_somatic_vcfs.join(ch_somatic_tbi)
     }
     
     // Tumor-only
@@ -271,11 +283,13 @@ workflow ASAP {
             }
     }
 
+    // Tumor only structural variant discovery 
     if ( params.run.bam_tumoronly_structural_variant_discovery ) {                    
         BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY( ch_bam_bai_tumor, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix( BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
     }
 
+    // Tumor only copy number discovery 
     if ( params.run.bam_tumoronly_copy_number_discovery ) {                    
         BAM_TUMORONLY_COPY_NUMBER_DISCOVERY( ch_bam_bai_tumor, ch_fasta )
         ch_versions = ch_versions.mix( BAM_TUMORONLY_COPY_NUMBER_DISCOVERY.out.versions )
@@ -292,6 +306,13 @@ workflow ASAP {
 
         VCF_SHORT_VARIANT_ANNOTATION( ch_input_annotation_vcfs, ch_fasta )
         ch_annotation_vcf_tbi = VCF_SHORT_VARIANT_ANNOTATION.out.vcf_tbi
+
+        // Assign the hla vcf if you have a somatic output vcf
+        ch_hla_sc_vcf = ch_annotation_vcf_tbi.map{ meta, vcf, tbi ->
+            if ( meta.calling_type == "somatic" ) {
+                [ meta, vcf, tbi]
+            }
+        }
     }
 
     // Structural variant filtration
@@ -312,6 +333,17 @@ workflow ASAP {
         
         VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION( ch_germline_vcf_tbi, ch_bam_bai )
         ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.versions )
+        
+        VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.view()
+        //ch_hla_sf_vcf = VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.vcf.join( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.tbi )
+    }
+
+    // HLA type calling 
+    if (params.run.bam_hla_type_calling) {
+        ch_hla_vcf = ch_hla_sc_vcf.mix( ch_hla_sf_vcf )
+
+        BAM_HLA_TYPE_CALLING(ch_bam_bai_sample_type.normal, ch_bam_bai_sample_type.tumor, ch_rna_bam, ch_cnv_dir, ch_hla_vcf,  ch_fasta, ch_fai)
+        ch_versions = ch_versions.mix( BAM_HLA_TYPE_CALLING.out.versions )
     }
 
     
