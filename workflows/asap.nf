@@ -334,8 +334,8 @@ workflow ASAP {
         VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION( ch_germline_vcf_tbi, ch_bam_bai )
         ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.versions )
         
-        VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.view()
-        //ch_hla_sf_vcf = VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.vcf.join( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.tbi )
+        // Define input for HLA type calling 
+        ch_hla_sf_vcf = VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.filtered_vcf.join( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.filtered_tbi )
     }
 
     // HLA type calling 

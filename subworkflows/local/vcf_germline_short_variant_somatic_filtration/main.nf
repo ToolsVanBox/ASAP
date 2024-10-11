@@ -21,7 +21,11 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION {
       if ( tool == "smurf" ) {
         
         VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF( ch_vcf_tbi, ch_bam_bai )
-        // ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF.out.versions )
+        ch_filtered_vcfs = VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF.out.filtered_vcf
+        ch_filtered_tbi = VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF.out.filtered_tbi
+        ch_vcfs = VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF.out.vcf
+        ch_tbi = VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF.out.tbi
+        ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF.out.versions )
         
         known_tool = true
       }
@@ -31,9 +35,11 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION {
       }
     }
   emit:
-    // vcf = ch_vcfs // channel: [ meta, vcf ]
-    // tbi = ch_tbi // channel: [ meta, tbi ]
-    versions = ch_versions // channel: [ versions.yml ]
+    filtered_vcf = ch_filtered_vcfs   // channel: [ meta, vcf ]
+    filtered_tbi = ch_filtered_tbi    // channel: [ meta, tbi ]
+    vcf = ch_vcfs                     // channel: [ meta, vcf ]
+    tbi = ch_tbi                      // channel: [ meta, tbi ] 
+    versions = ch_versions            // channel: [ versions.yml ]
 }
 
 

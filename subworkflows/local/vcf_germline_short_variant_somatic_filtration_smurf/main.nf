@@ -2,7 +2,6 @@
 // VCF SOMATIC FILTRATION SMURF
 
 // Include local modules
-
 include { SMURF } from '../../../modules/local/SMuRF/main.nf'
 
 // Include nf-core modules
@@ -33,10 +32,11 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
       }
 
     TABIX_BGZIP( ch_input )
-
+    ch_versions = ch_versions.mix( TABIX_BGZIP.out.versions )
     ch_vcf = TABIX_BGZIP.out.output
 
     SNPSIFT_SPLIT( ch_vcf )
+    ch_versions = ch_versions.mix( SNPSIFT_SPLIT.out.versions )
     
     ch_bgziptabix = SNPSIFT_SPLIT.out.out_vcfs
         .map{ meta, vcf_file ->
@@ -48,6 +48,7 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
         }
           
     TABIX_BGZIPTABIX( ch_bgziptabix )
+    ch_versions = ch_versions.mix( TABIX_BGZIPTABIX.out.versions )
 
     ch_smurf = TABIX_BGZIPTABIX.out.gz_tbi
       .combine( 
@@ -85,38 +86,6 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
           [ meta, vcf_file, tbi, bam, bai ]
       }
 
-    // ch_smurf = TABIX_BGZIPTABIX.out.gz_tbi
-    //   .combine( 
-    //     ch_bam_bai
-    //       .map{ meta, bam, bai ->
-    //         if (meta.sample_type == "normal") {
-    //           // meta2 = meta - meta.subMap('sample','sample_type','id')
-    //           meta2 = [:]
-    //           meta2.run_id = meta.run_id
-    //           [ meta2, meta.sample ]
-    //         }
-    //       }
-    //       .groupTuple()
-    //       .combine( 
-    //         ch_bam_bai
-    //           .map{ meta, bam, bai ->
-    //             // meta = meta - meta.subMap('sample','sample_type','id')
-    //             meta2 = [:]
-    //             meta2.run_id = meta.run_id
-    //             [meta2, bam, bai]
-    //           }
-    //           .groupTuple()
-    //       )
-    //       .map{ meta, bulk_names2, meta2, bam, bai ->
-    //         meta = meta + [ bulk_names: bulk_names2 ]
-    //         [ meta, bam, bai ]
-    //       }
-    //   )
-    //   .map{ meta, vcf_file, tbi, meta2, bam, bai ->
-    //       meta = meta + [ bulk_names: meta2.bulk_names ]
-    //       [ meta, vcf_file, tbi, bam, bai ]
-    //   }
-
       SMURF( ch_smurf, config )
 
       ch_filtered_vcfs = SMURF.out.smurf_filtered_vcf
@@ -130,26 +99,32 @@ workflow VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION_SMURF {
               [ [ id: file(meta.id).getBaseName()+".SMuRF" ], vcf_file ]
           }
           .groupTuple()
-
-      
       
       // Join, sort and tabix for the smurf filtered vcf
       SNPSIFT_JOIN_SMURF_FILTERED_VCFS( ch_filtered_vcfs )
       BCFTOOLS_SMURF_FILTERED_SORT( SNPSIFT_JOIN_SMURF_FILTERED_VCFS.out.out_vcfs )
       ch_versions = ch_versions.mix( BCFTOOLS_SMURF_FILTERED_SORT.out.versions )
+      TABIX_SMURF_FILTERED( BCFTOOLS_SMURF_FILTERED_SORT.out.vcf )
+      ch_versions = ch_versions.mix( TABIX_SMURF_FILTERED.out.versions )
 
       // Join, sort and tabix for the smurf vcf
       SNPSIFT_JOIN_SMURF_VCFS( ch_smurf_vcfs )
       BCFTOOLS_SMURF_SORT( SNPSIFT_JOIN_SMURF_VCFS.out.out_vcfs )
       ch_versions = ch_versions.mix( BCFTOOLS_SMURF_SORT.out.versions )
-
-      // Test tabix 
-      TABIX_SMURF_FILTERED( BCFTOOLS_SMURF_FILTERED_SORT.out.vcf )
       TABIX_SMURF( BCFTOOLS_SMURF_SORT.out.vcf )
+      ch_versions = ch_versions.mix( TABIX_SMURF.out.versions )
+      
+      
       
 
   emit:
-    versions = ch_versions // channel: [ versions.yml ]
+    versions = ch_versions                                // channel: [ versions.yml ]
+
+    filtered_vcf = BCFTOOLS_SMURF_FILTERED_SORT.out.vcf   // channel: [ meta, filtered_vcf ]
+    filtered_tbi = TABIX_SMURF_FILTERED.out.tbi           // channel: [ meta, filtered_tbi ]
+
+    vcf = BCFTOOLS_SMURF_SORT.out.vcf                     // channel: [ meta, vcf ]
+    tbi = TABIX_SMURF.out.tbi                             // channel: [ meta, tbi ]
     
 }
 
