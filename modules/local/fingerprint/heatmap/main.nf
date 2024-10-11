@@ -9,7 +9,7 @@ process FINGERPRINT_HEATMAP {
 
 
     input:
-    tuple val(meta), path(vcf)
+    tuple val(meta), path(vcf), path(tbi)
 
     output:
     tuple val(meta), path("*_fingerprintheatmap.pdf")     , emit: fingerprintheatmap
