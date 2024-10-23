@@ -30,8 +30,8 @@ process SMURF {
     echo \${host}
 
     export projectDir=${projectDir}
-
-    python /smurf/SMuRF.py \
+    
+    python /hpc/pmc_vanboxtel/tools/ToolsVanBox_DEV/SMuRF/SMuRF.py \
     -i ${vcf} \
     ${b} \
     ${n} \
