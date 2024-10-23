@@ -18,14 +18,14 @@
           "format": "file-path",
           "exists": true,
           "pattern": "^\\S+\\.f(ast)?q\\.gz$",
-          "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'",
+          "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
         },
         "fastq_2": {
           "type": "string",
           "format": "file-path",
           "exists": true,
           "pattern": "^\\S+\\.f(ast)?q\\.gz$",
-          "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+          "errorMessage": "FastQ file for reads 2 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
         },
         "bam": {
           "type": "string",
@@ -40,6 +40,20 @@
             "exists": true,
             "pattern": "^\\S+\\.bai$",
             "errorMessage": "Bam file cannot contain spaces and must have extension '.bai'"
+        },
+        "cram": {
+          "type": "string",
+          "format": "file-path",
+          "exists": true,
+          "pattern": "^\\S+\\.cram$",
+          "errorMessage": "Bam file cannot contain spaces and must have extension '.cram'"
+        },
+        "crai": {
+            "type": "string",
+            "format": "file-path",
+            "exists": true,
+            "pattern": "^\\S+\\.crai$",
+            "errorMessage": "Bam file cannot contain spaces and must have extension '.crai'"
         },
         "sample_type": {
             "type": "string",
@@ -57,6 +71,7 @@
     },
     "allOf": [
       {"uniqueEntries": ["fastq_1", "fastq_2"]},
-      {"uniqueEntries": ["bam","bai"]}
+      {"uniqueEntries": ["bam","bai"]},
+      {"uniqueEntries": ["cram","crai"]}
   ]
   }

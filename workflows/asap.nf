@@ -80,13 +80,16 @@ workflow ASAP {
     ch_fasta_dict = Channel.value( dict )
       .map{ genome_fasta_dict -> [ [ id:'fasta_dict' ], genome_fasta_dict ] }
 
+    // Convert Cram to Bam here! Add to ch_input_type.bam --> input = ch_input_type.cram
+    //Roughly: ch_input_type.bam.mix(CRAM_CONVERT_TO_BAM.out.bam)
+
     // Split bams from the input data into dedupped and not dedupped (other)
     ch_bam_types = ch_input_type.bam.branch{
         dedup: it[1].toString() =~ /.*dedup.bam$/
         other: true
     }
 
-    // Split crams from the input data into dedupped and not dedupped (other)
+    // Split crams from the input data into dedupped and not dedupped (other) --> Remove 
     ch_cram_types = ch_input_type.cram.branch{
         dedup: it[1].toString() =~ /.*dedup.cram$/
         other: true
@@ -144,7 +147,7 @@ workflow ASAP {
     }
 
     // Convert bam files to cram files (for backup)
-    if ( params.run.bam_convert_to_cram ) {
+    if ( params.run.fastq_align || params.run.bam_markduplicates ) {
         BAM_CONVERT_TO_CRAM( ch_bam_bai, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix( BAM_CONVERT_TO_CRAM.out.versions.first() )
         ch_cram_crai = BAM_CONVERT_TO_CRAM.out.cram_crai
@@ -362,7 +365,7 @@ def parseSampleSheet( ch_csv ) {
     }
 
     ch_csv
-        .map{ meta, fastq_1, fastq_2, bam, bai, sample_type, platform ->
+        .map{ meta, fastq_1, fastq_2, bam, bai, cram, crai, sample_type, platform ->
             meta = meta + [ run_id: run_id, sample_type: sample_type ]
             if ( fastq_1 && fastq_2 ) {
                 // Map per lane OLD WAY
@@ -379,16 +382,22 @@ def parseSampleSheet( ch_csv ) {
                 meta = meta + [ data_type: "fastq" ]
                 return [ meta, [ fastq_1, fastq_2 ] ]
             }
+
+            // ToDo: Add statement that you can start with one fastq? Or create error
+
             if ( bam ) {
                 meta = meta + [ id: bam.getBaseName() ]
-                if ( bam.getExtension() == "bam" ) {
-                    meta = meta + [ data_type: "bam" ]
-                }
-                if ( bam.getExtension() == "cram" ) {
-                    meta = meta + [ data_type: "cram" ]
-                }
+                meta = meta + [ data_type: "bam" ]
                 return [ meta, bam, bai ]
             }
+
+            if ( cram ) {
+                meta = meta + [ id: cram.getBaseName() ]
+                meta = meta + [ data_type: "cram" ]
+                return [ meta, cram, crai ]
+            }
+
+            // ToDo: Add statement makes sure that you don't have a combination that doesn't make sense: fastq + bam + cram within one row, for example 
             
         }
 }
