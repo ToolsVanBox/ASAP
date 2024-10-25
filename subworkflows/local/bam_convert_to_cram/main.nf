@@ -2,7 +2,7 @@
 // BAM CONVERT TO CRAM
 
 // Include nf-core modules
-include { SAMTOOLS_CONVERT } from '../../../modules/nf-core/samtools/convert/main'                             
+include { SAMTOOLS_CONVERT as SAMTOOLS_CONVERT_BAM } from '../../../modules/nf-core/samtools/convert/main'                             
 
 workflow BAM_CONVERT_TO_CRAM {
   take:
@@ -23,10 +23,10 @@ workflow BAM_CONVERT_TO_CRAM {
 
       // Run Picard Fingerprint
       if ( tool == "samtools" ) {
-        SAMTOOLS_CONVERT( ch_bam_bai, fasta, fai )
-        ch_versions = ch_versions.mix( SAMTOOLS_CONVERT.out.versions )  
+        SAMTOOLS_CONVERT_BAM( ch_bam_bai, fasta, fai )
+        ch_versions = ch_versions.mix( SAMTOOLS_CONVERT_BAM.out.versions )  
 
-        ch_crams = SAMTOOLS_CONVERT.out.alignment_index
+        ch_crams = SAMTOOLS_CONVERT_BAM.out.alignment_index
                     
         known_tool = true
       }
