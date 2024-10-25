@@ -54,12 +54,12 @@ for CRAM in ${CRAMS[@]}; do
 	BAM=""
 	BAI=""
 	SAMPLE=$( echo $(basename ${CRAM}) | cut -f1 -d'_')
-	CRAI=${CRAM}.bai
+	CRAI=${CRAM}.crai
 	if [[ ! -f ${CRAI} ]]; then
 		CRAI=${CRAM/.cram/.crai}
 	fi
 	if [[ ! -f ${CRAI} ]]; then
-		echo "NO BAI FILE FOUND FOR ${SAMPLE}"
+		echo "NO CRAI FILE FOUND FOR ${SAMPLE}"
 	fi
 	echo ${SAMPLE},${FASTQ_1},${FASTQ_2},${BAM},${BAI},${CRAM},${CRAI},${SAMPLE_TYPE}
 done
