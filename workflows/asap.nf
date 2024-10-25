@@ -12,6 +12,7 @@ include { BAM_MARKDUPLICATES } from '../subworkflows/local/bam_markduplicates/ma
 include { BAM_QC_POST_MAPPING } from '../subworkflows/local/bam_qc_post_mapping/main.nf'
 include { BAM_FINGERPRINT } from '../subworkflows/local/bam_fingerprint/main.nf'
 include { BAM_CONVERT_TO_CRAM } from '../subworkflows/local/bam_convert_to_cram/main.nf'
+include { CRAM_CONVERT_TO_BAM } from '../subworkflows/local/cram_convert_to_bam/main.nf'
 include { BAM_TELOMERES } from '../subworkflows/local/bam_telomeres/main.nf'
 
 include { BAM_GERMLINE_SHORT_VARIANT_DISCOVERY } from '../subworkflows/local/bam_germline_short_variant_discovery/main.nf'
@@ -80,18 +81,13 @@ workflow ASAP {
     ch_fasta_dict = Channel.value( dict )
       .map{ genome_fasta_dict -> [ [ id:'fasta_dict' ], genome_fasta_dict ] }
 
-    // Convert Cram to Bam here! Add to ch_input_type.bam --> input = ch_input_type.cram
-    //Roughly: ch_input_type.bam.mix(CRAM_CONVERT_TO_BAM.out.bam)
+    // Convert Cram to Bam
+    CRAM_CONVERT_TO_BAM(ch_input_type.cram, ch_fasta, ch_fai)
+    ch_input_bam = ch_input_type.bam.mix(CRAM_CONVERT_TO_BAM.out.bam_bai)
 
     // Split bams from the input data into dedupped and not dedupped (other)
-    ch_bam_types = ch_input_type.bam.branch{
+    ch_bam_types = ch_input_bam.branch{
         dedup: it[1].toString() =~ /.*dedup.bam$/
-        other: true
-    }
-
-    // Split crams from the input data into dedupped and not dedupped (other) --> Remove 
-    ch_cram_types = ch_input_type.cram.branch{
-        dedup: it[1].toString() =~ /.*dedup.cram$/
         other: true
     }
 
