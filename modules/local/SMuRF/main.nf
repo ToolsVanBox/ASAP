@@ -3,8 +3,9 @@ process SMURF {
   label 'process_single'
   
   container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'docker://vanboxtelbioinformatics/smurf:3.0.2':
-        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:3ea5c21b0aaf696dbdaadc851ada4fc82744ece9b03f139bca73a7299e215492' }"
+        'docker://vanboxtelbioinformatics/smurf:3.0.3':
+        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:7830deca317267ca9d13354089a659c35a27e5d71b910c7981a3d689dcbd0cc9' }"
+  //'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:3ea5c21b0aaf696dbdaadc851ada4fc82744ece9b03f139bca73a7299e215492' }"
   // container = 'docker.io/vanboxtelbioinformatics/smurf:3.0.2'
 
   input:
@@ -30,7 +31,7 @@ process SMURF {
     echo \${host}
 
     export projectDir=${projectDir}
-    python /hpc/pmc_vanboxtel/tools/ToolsVanBox_DEV/SMuRF/SMuRF.py \
+    python /smurf/SMuRF.py \
     -i ${vcf} \
     ${b} \
     ${n} \
