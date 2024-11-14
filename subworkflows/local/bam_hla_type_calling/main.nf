@@ -44,7 +44,7 @@ workflow BAM_HLA_TYPE_CALLING {
                     }
 
                 // Run Lilac for HLA-type calling 
-                BAM_HLA_TYPE_CALLING_LILAC(ch_input, ch_normal_bam, ch_tumor_bam, ch_tumor_rna_bam, ch_cnv_dir, ch_somatic_vcf,  ch_fasta, ch_fai)
+                BAM_HLA_TYPE_CALLING_LILAC(ch_input, ch_normal_bam, ch_tumor_bam, ch_tumor_rna_bam, ch_cnv_dir, ch_somatic_vcf,  ch_fasta, ch_fai, lilac_slice)
                 ch_versions = ch_versions.mix( BAM_HLA_TYPE_CALLING_LILAC.out.versions )
 
                 known_tool = true
