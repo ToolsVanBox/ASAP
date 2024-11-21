@@ -69,12 +69,15 @@ workflow BAM_HLA_TYPE_CALLING_LILAC {
                 ch_extract_contig_run,
             )
             ch_versions = ch_versions.mix(EXTRACTCONTIG.out.versions)
-
-
-            SLICEBAM.out.bam.view()
-            // Realign reads 
+            
+            // Realign reads
+            ch_realign_bam = SLICEBAM.out.bam.map{ meta, bam, bai -> 
+                meta.sample_id = meta.id
+                [meta, bam, bai ]
+            }
+            
             REALIGNREADS(
-                SLICEBAM.out.bam,
+                ch_realign_bam,
                 EXTRACTCONTIG.out.contig,
                 EXTRACTCONTIG.out.bwamem2_index,
             )
