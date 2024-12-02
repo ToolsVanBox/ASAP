@@ -3,8 +3,8 @@ process CONTROLFREEC_MAKEBAFPLOT {
     label 'process_low'
     // container = 'docker.io/vanboxtelbioinformatics/asap_r:1.0'
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'docker://vanboxtelbioinformatics/asap_r:1.0':
-        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/asap_r@sha256:5bbbea6cd507d9ffea2f9e6daa6a6ee2b1abd84528218d25628df6ace50d98a3' }"
+        'docker://vanboxtelbioinformatics/asap_r:1.1':
+        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/asap_r@sha256:17e59124425ae3aa17fe096418f1d61f225e9c3cae163430fbeafbc8d716d260' }"
     input:
     tuple val(meta), path(baf)
 
