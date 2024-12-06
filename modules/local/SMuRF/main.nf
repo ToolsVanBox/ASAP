@@ -4,7 +4,7 @@ process SMURF {
   
   container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'docker://vanboxtelbioinformatics/smurf:3.0.3':
-        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:7830deca317267ca9d13354089a659c35a27e5d71b910c7981a3d689dcbd0cc9' }"
+        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:b91e78c95ee172e5a68ea09022ca85b32cb1fafda85b1ae03a6f296d523ec50c' }"
   //'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:3ea5c21b0aaf696dbdaadc851ada4fc82744ece9b03f139bca73a7299e215492' }"
   // container = 'docker.io/vanboxtelbioinformatics/smurf:3.0.2'
 
