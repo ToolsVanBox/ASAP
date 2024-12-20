@@ -3,7 +3,8 @@
 
 // Include nf-core modules
 include { GATK_UNIFIEDGENOTYPER } from '../../../modules/nf-core/gatk/unifiedgenotyper/main'
-include { TABIX_BGZIP } from '../../../modules/nf-core/tabix/bgzip/main'
+//include { TABIX_BGZIP } from '../../../modules/nf-core/tabix/bgzip/main'
+include { TABIX_BGZIPTABIX as TABIX_BGZIPTABIX_FINGERPRINT} from '../../../modules/nf-core/tabix/bgziptabix/main'
 include { FINGERPRINT_HEATMAP } from '../../../modules/local/fingerprint/heatmap/main'
 
 workflow BAM_FINGERPRINT_GATK {
@@ -26,16 +27,21 @@ workflow BAM_FINGERPRINT_GATK {
 		ch_versions = ch_versions.mix( GATK_UNIFIEDGENOTYPER.out.versions )  
 
 		// Unzip the vcf file 
-		TABIX_BGZIP( GATK_UNIFIEDGENOTYPER.out.vcf.map{ meta, vcfs ->
-				vcf = vcfs.find { it.toString().endsWith("gatk_unifiedgenotyper.vcf.gz")}
+		/*TABIX_BGZIP( GATK_UNIFIEDGENOTYPER.out.vcf.map{ meta, vcfs ->
+				vcf = vcfs.find { it.toString().endsWith("gatk_unifiedgenotyper.vcf")}
 				[ meta, vcf]
-			})
+			}
 		ch_versions = ch_versions.mix( TABIX_BGZIP.out.versions )  
+		*/
+
+		// Zip the output 
+		TABIX_BGZIPTABIX_FINGERPRINT( GATK_UNIFIEDGENOTYPER.out.vcf )
+		
 
 		// Combine vcf file
-		ch_fingerprintvcf = TABIX_BGZIP.out.output
-			.map{ meta, vcf ->
-				[ [ id:meta.run_id ], vcf]
+		ch_fingerprintvcf = TABIX_BGZIPTABIX_FINGERPRINT.out.gz_tbi
+			.map{ meta, vcf, tbi ->
+				[ [ id:meta.run_id ], vcf, tbi]
 			}.groupTuple()
 
 		// Add heatmap (check bam_copynumber freec) 

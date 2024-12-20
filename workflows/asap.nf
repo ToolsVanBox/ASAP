@@ -12,6 +12,7 @@ include { BAM_MARKDUPLICATES } from '../subworkflows/local/bam_markduplicates/ma
 include { BAM_QC_POST_MAPPING } from '../subworkflows/local/bam_qc_post_mapping/main.nf'
 include { BAM_FINGERPRINT } from '../subworkflows/local/bam_fingerprint/main.nf'
 include { BAM_CONVERT_TO_CRAM } from '../subworkflows/local/bam_convert_to_cram/main.nf'
+include { CRAM_CONVERT_TO_BAM } from '../subworkflows/local/cram_convert_to_bam/main.nf'
 include { BAM_TELOMERES } from '../subworkflows/local/bam_telomeres/main.nf'
 
 include { BAM_GERMLINE_SHORT_VARIANT_DISCOVERY } from '../subworkflows/local/bam_germline_short_variant_discovery/main.nf'
@@ -25,11 +26,15 @@ include { BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY } from '../subworkflows/local
 include { BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY } from '../subworkflows/local/bam_tumoronly_structural_variant_discovery/main.nf'
 include { BAM_TUMORONLY_COPY_NUMBER_DISCOVERY } from '../subworkflows/local/bam_tumoronly_copy_number_discovery/main.nf'
 
-include { VCF_VARIANT_FILTRATION } from '../subworkflows/local/vcf_variant_filtration/main.nf'
-include { VCF_VARIANT_ANNOTATION } from '../subworkflows/local/vcf_variant_annotation/main.nf'
+include { VCF_GERMLINE_SHORT_VARIANT_FILTRATION } from '../subworkflows/local/vcf_germline_short_variant_filtration/main.nf'
+include { VCF_SOMATIC_SHORT_VARIANT_FILTRATION } from '../subworkflows/local/vcf_somatic_short_variant_filtration/main.nf'
+include { VCF_SHORT_VARIANT_ANNOTATION } from '../subworkflows/local/vcf_short_variant_annotation/main.nf'
 include { VCF_STRUCTURAL_VARIANT_FILTRATION } from '../subworkflows/local/vcf_structural_variant_filtration/main.nf'
 
-include { VCF_SOMATIC_FILTRATION } from '../subworkflows/local/vcf_somatic_filtration/main.nf'
+include { VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION } from '../subworkflows/local/vcf_germline_short_variant_somatic_filtration/main.nf'
+
+include { BAM_HLA_TYPE_CALLING } from '../subworkflows/local/bam_hla_type_calling/main.nf'
+
  
 // Include nf-core modules
 include { GATK4_SPLITINTERVALS } from '../modules/nf-core/gatk4/splitintervals/main'                                                                          
@@ -48,14 +53,23 @@ workflow ASAP {
     ch_versions = Channel.empty()
     ch_bam_bai = Channel.empty()
     ch_other_bam_bai = Channel.empty()
-    ch_vcfs = Channel.empty()
-    ch_tbi = Channel.empty()    
+    ch_germline_vcfs = Channel.empty()
+    ch_germline_tbi = Channel.empty()
+    ch_somatic_vcfs = Channel.empty()
+    ch_somatic_tbi = Channel.empty() 
+    ch_input_annotation_vcfs = Channel.empty()
+    ch_annotation_vcf_tbi = Channel.empty()
+    ch_hla_vcf = Channel.empty()
+    ch_hla_sc_vcf = Channel.empty()
+    ch_hla_sf_vcf = Channel.empty()
+    ch_rna_bam = Channel.empty()
+    ch_cnv_dir = Channel.empty()
     
     // Define variables
     def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
-    def fai = file( fasta.toString()+".fai", checkIfExists: true )
-    def fasta_dict = file( fasta.toString()+".dict", checkIfExists: true )
-    def dict = file( fasta.toString().replace(".fasta",".dict" ), checkIfExists: true )
+    def fai = file( params.genomes[params.genome].fai, checkIfExists: true )
+    def dict = file( params.genomes[params.genome].dict, checkIfExists: true )
+    def fasta_dict = file( params.genomes[params.genome].fasta_dict, checkIfExists: true )
     
     // Create channels of the variables
     ch_fasta = Channel.value( fasta )
@@ -67,15 +81,13 @@ workflow ASAP {
     ch_fasta_dict = Channel.value( dict )
       .map{ genome_fasta_dict -> [ [ id:'fasta_dict' ], genome_fasta_dict ] }
 
-    // Split bams from the input data into dedupped and not dedupped (other)
-    ch_bam_types = ch_input_type.bam.branch{
-        dedup: it[1].toString() =~ /.*dedup.bam$/
-        other: true
-    }
+    // Convert Cram to Bam
+    CRAM_CONVERT_TO_BAM(ch_input_type.cram, ch_fasta, ch_fai)
+    ch_input_bam = ch_input_type.bam.mix(CRAM_CONVERT_TO_BAM.out.bam_bai)
 
-    // Split crams from the input data into dedupped and not dedupped (other)
-    ch_cram_types = ch_input_type.cram.branch{
-        dedup: it[1].toString() =~ /.*dedup.cram$/
+    // Split bams from the input data into dedupped and not dedupped (other)
+    ch_bam_types = ch_input_bam.branch{
+        dedup: it[1].toString() =~ /.*dedup.bam$/
         other: true
     }
 
@@ -131,7 +143,7 @@ workflow ASAP {
     }
 
     // Convert bam files to cram files (for backup)
-    if ( params.run.bam_convert_to_cram ) {
+    if ( params.run.fastq_align || params.run.bam_markduplicates ) {
         BAM_CONVERT_TO_CRAM( ch_bam_bai, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix( BAM_CONVERT_TO_CRAM.out.versions.first() )
         ch_cram_crai = BAM_CONVERT_TO_CRAM.out.cram_crai
@@ -176,21 +188,33 @@ workflow ASAP {
             }
     }
 
-    // Germline calling
+    // Germline short variant calling
     if ( params.run.bam_germline_short_variant_discovery ) {        
         BAM_GERMLINE_SHORT_VARIANT_DISCOVERY( ch_bam_bai, ch_split_intervals, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.versions )
 
-        ch_vcfs = ch_vcfs.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.vcf )
-        ch_tbi = ch_tbi.mix( BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.tbi )
+        ch_germline_vcfs = BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.vcf 
+        ch_germline_tbi = BAM_GERMLINE_SHORT_VARIANT_DISCOVERY.out.tbi 
+        // Variant filtration
+        if ( params.run.vcf_germline_short_variant_filtration ) {
+            ch_germline_variant_filtration = ch_germline_vcfs
+                .join( ch_germline_tbi )
 
+            VCF_GERMLINE_SHORT_VARIANT_FILTRATION( ch_germline_variant_filtration, ch_fasta, ch_fai, ch_dict )
+            ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_FILTRATION.out.versions )
+
+            ch_germline_vcfs = VCF_GERMLINE_SHORT_VARIANT_FILTRATION.out.vcf
+            ch_germline_tbi = VCF_GERMLINE_SHORT_VARIANT_FILTRATION.out.tbi
+        }
     }
 
+    // Germline copy number discovery 
     if ( params.run.bam_germline_copy_number_discovery ) {
         BAM_GERMLINE_COPY_NUMBER_DISCOVERY( ch_bam_bai, ch_fasta )
         ch_versions = ch_versions.mix( BAM_GERMLINE_COPY_NUMBER_DISCOVERY.out.versions )
     }   
 
+    // Germline structural variant discovery 
     if ( params.run.bam_germline_structural_variant_discovery ) {
         BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY( ch_bam_bai, ch_fasta, ch_fai, ch_fasta_dict )
         ch_versions = ch_versions.mix( BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
@@ -203,7 +227,7 @@ workflow ASAP {
         tumor: it[0].sample_type == "tumor"
     }
      
-    // Somatic calling
+    // Somatic calling input preparation 
     if ( params.run.bam_somatic_structural_variant_discovery || params.run.bam_somatic_copy_number_discovery || params.run.bam_somatic_short_variant_discovery ) {
         ch_bam_bai_normal_tumor = ch_bam_bai_sample_type.normal.ifEmpty( [ [], null, null ] )
                 .combine( ch_bam_bai_sample_type.tumor.ifEmpty( [ [], null, null ] ) )
@@ -214,22 +238,39 @@ workflow ASAP {
                 }       
     }
 
+    // Somatic structural variant discovery 
     if ( params.run.bam_somatic_structural_variant_discovery ) {                    
         BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY( ch_bam_bai_normal_tumor, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix( BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
     }
 
+    // Somatic copy number discovery 
     if ( params.run.bam_somatic_copy_number_discovery ) {                    
         BAM_SOMATIC_COPY_NUMBER_DISCOVERY( ch_bam_bai_sample_type.normal, ch_bam_bai_sample_type.tumor, ch_fasta )
         ch_versions = ch_versions.mix( BAM_SOMATIC_COPY_NUMBER_DISCOVERY.out.versions )
     }
 
+    // Somatic short variant discovery 
     if ( params.run.bam_somatic_short_variant_discovery ) {
         BAM_SOMATIC_SHORT_VARIANT_DISCOVERY( ch_bam_bai_sample_type.tumor, ch_bam_bai_sample_type.normal, ch_split_intervals, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.versions )
         
-        // ch_vcfs = ch_vcfs.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.vcf )
-        // ch_tbi = ch_tbi.mix( BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.tbi )
+        ch_somatic_vcfs = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.vcf 
+        ch_somatic_tbi = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.tbi 
+        ch_somatic_f1r2 = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.f1r2 
+        ch_somatic_stats = BAM_SOMATIC_SHORT_VARIANT_DISCOVERY.out.stats 
+
+        // Variant filtration 
+        if ( params.run.vcf_somatic_short_variant_filtration ) {
+            VCF_SOMATIC_SHORT_VARIANT_FILTRATION(ch_somatic_vcfs, ch_somatic_tbi, ch_somatic_f1r2, ch_somatic_stats, ch_bam_bai_sample_type.tumor, ch_bam_bai_sample_type.normal, ch_split_intervals, ch_fasta, ch_fai, ch_dict  )
+            ch_versions = ch_versions.mix( VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.versions )
+
+            ch_somatic_vcfs = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.vcf
+            ch_somatic_tbi = VCF_SOMATIC_SHORT_VARIANT_FILTRATION.out.tbi
+        }
+
+        // Assign hla vcf to be the somatic vcf (Double check if this takes along the filtration step)
+        ch_hla_sc_vcf = ch_somatic_vcfs.join(ch_somatic_tbi)
     }
     
     // Tumor-only
@@ -241,33 +282,36 @@ workflow ASAP {
             }
     }
 
+    // Tumor only structural variant discovery 
     if ( params.run.bam_tumoronly_structural_variant_discovery ) {                    
         BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY( ch_bam_bai_tumor, ch_fasta, ch_fai )
         ch_versions = ch_versions.mix( BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY.out.versions )
     }
 
+    // Tumor only copy number discovery 
     if ( params.run.bam_tumoronly_copy_number_discovery ) {                    
         BAM_TUMORONLY_COPY_NUMBER_DISCOVERY( ch_bam_bai_tumor, ch_fasta )
         ch_versions = ch_versions.mix( BAM_TUMORONLY_COPY_NUMBER_DISCOVERY.out.versions )
     }
     
+    // Short variant annotation 
+    if ( params.run.vcf_short_variant_annotation ) {
+        if (params.run.bam_germline_short_variant_discovery){
+            ch_input_annotation_vcfs = ch_input_annotation_vcfs.mix(ch_germline_vcfs)
+        }
+        if (params.run.bam_somatic_short_variant_discovery){
+            ch_input_annotation_vcfs = ch_input_annotation_vcfs.mix(ch_somatic_vcfs)
+        }
 
-    // Variant filtration
-    if ( params.run.vcf_variant_filtration ) {
-        ch_variant_filtration = ch_vcfs
-            .join( ch_tbi )
+        VCF_SHORT_VARIANT_ANNOTATION( ch_input_annotation_vcfs, ch_fasta )
+        ch_annotation_vcf_tbi = VCF_SHORT_VARIANT_ANNOTATION.out.vcf_tbi
 
-        VCF_VARIANT_FILTRATION( ch_variant_filtration, ch_fasta, ch_fai, ch_dict )
-        ch_versions = ch_versions.mix( VCF_VARIANT_FILTRATION.out.versions )
-
-        ch_vcfs = VCF_VARIANT_FILTRATION.out.vcf
-    }
-    
-    if ( params.run.vcf_variant_annotation ) {
-        VCF_VARIANT_ANNOTATION( ch_vcfs, ch_fasta )
-
-        ch_vcf_tbi = VCF_VARIANT_ANNOTATION.out.vcf_tbi
-
+        // Assign the hla vcf if you have a somatic output vcf
+        ch_hla_sc_vcf = ch_annotation_vcf_tbi.map{ meta, vcf, tbi ->
+            if ( meta.calling_type == "somatic" ) {
+                [ meta, vcf, tbi]
+            }
+        }
     }
 
     // Structural variant filtration
@@ -278,17 +322,27 @@ workflow ASAP {
     }
 
     // Somatic filtering
-    if ( params.run.vcf_somatic_filtration ) {
-        ch_germline_vcf_tbi = ch_vcf_tbi
+    if ( params.run.vcf_germline_short_variant_somatic_filtration ) {
+        ch_germline_vcf_tbi = ch_annotation_vcf_tbi
             .map{ meta, vcf, tbi ->
                 if ( meta.calling_type == "germline" ) {
                     [ meta, vcf, tbi]
                 }
             }
         
-        VCF_SOMATIC_FILTRATION( ch_germline_vcf_tbi, ch_bam_bai )
-        ch_versions = ch_versions.mix( VCF_SOMATIC_FILTRATION.out.versions )
+        VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION( ch_germline_vcf_tbi, ch_bam_bai )
+        ch_versions = ch_versions.mix( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.versions )
+        
+        // Define input for HLA type calling 
+        ch_hla_sf_vcf = VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.filtered_vcf.join( VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION.out.filtered_tbi )
+    }
 
+    // HLA type calling 
+    if (params.run.bam_hla_type_calling) {
+        ch_hla_vcf = ch_hla_sc_vcf.mix( ch_hla_sf_vcf )
+
+        BAM_HLA_TYPE_CALLING(ch_bam_bai_sample_type.normal, ch_bam_bai_sample_type.tumor, ch_rna_bam, ch_cnv_dir, ch_hla_vcf,  ch_fasta, ch_fai)
+        ch_versions = ch_versions.mix( BAM_HLA_TYPE_CALLING.out.versions )
     }
 
     
@@ -307,7 +361,7 @@ def parseSampleSheet( ch_csv ) {
     }
 
     ch_csv
-        .map{ meta, fastq_1, fastq_2, bam, bai, sample_type, platform ->
+        .map{ meta, fastq_1, fastq_2, bam, bai, cram, crai, sample_type, platform ->
             meta = meta + [ run_id: run_id, sample_type: sample_type ]
             if ( fastq_1 && fastq_2 ) {
                 // Map per lane OLD WAY
@@ -324,16 +378,22 @@ def parseSampleSheet( ch_csv ) {
                 meta = meta + [ data_type: "fastq" ]
                 return [ meta, [ fastq_1, fastq_2 ] ]
             }
+
+            // ToDo: Add statement that you can start with one fastq? Or create error
+
             if ( bam ) {
                 meta = meta + [ id: bam.getBaseName() ]
-                if ( bam.getExtension() == "bam" ) {
-                    meta = meta + [ data_type: "bam" ]
-                }
-                if ( bam.getExtension() == "cram" ) {
-                    meta = meta + [ data_type: "cram" ]
-                }
+                meta = meta + [ data_type: "bam" ]
                 return [ meta, bam, bai ]
             }
+
+            if ( cram ) {
+                meta = meta + [ id: cram.getBaseName() ]
+                meta = meta + [ data_type: "cram" ]
+                return [ meta, cram, crai ]
+            }
+
+            // ToDo: Add statement makes sure that you don't have a combination that doesn't make sense: fastq + bam + cram within one row, for example 
             
         }
 }

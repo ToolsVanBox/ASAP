@@ -18,7 +18,7 @@ process GATK_UNIFIEDGENOTYPER {
     tuple val(meta8), path(comp)
 
     output:
-    tuple val(meta), path("*.vcf.gz"), emit: vcf
+    tuple val(meta), path("*.vcf")   , emit: vcf
     path "versions.yml"              , emit: versions
 
     when:
@@ -52,8 +52,6 @@ process GATK_UNIFIEDGENOTYPER {
         ${intervals_file} \\
         -o ${prefix}.vcf \\
         $args
-
-    gzip -n *.vcf
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

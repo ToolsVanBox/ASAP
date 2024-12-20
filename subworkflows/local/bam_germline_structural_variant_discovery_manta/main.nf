@@ -22,7 +22,7 @@ workflow BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY_MANTA {
         }
 
       def fasta = file( params.genomes[params.genome].fasta, checkIfExists: true )
-      def fai = file( fasta.toString()+".fai", checkIfExists: true )
+      def fai = file( params.genomes[params.genome].fai, checkIfExists: true )
       
       ch_fasta = Channel.value( fasta )
         .map{ genome_fasta -> [ [ id:'fasta' ], genome_fasta ] } 

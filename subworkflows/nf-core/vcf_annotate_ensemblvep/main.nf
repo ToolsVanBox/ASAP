@@ -3,7 +3,7 @@
 //
 
 include { ENSEMBLVEP_VEP } from '../../../modules/nf-core/ensemblvep/vep/main'
-include { TABIX_TABIX    } from '../../../modules/nf-core/tabix/tabix/main'
+include { TABIX_TABIX as VEP_TABIX_TABIX   } from '../../../modules/nf-core/tabix/tabix/main'
 
 workflow VCF_ANNOTATE_ENSEMBLVEP {
     take:
@@ -29,13 +29,13 @@ workflow VCF_ANNOTATE_ENSEMBLVEP {
         ch_extra_files
     )
 
-    TABIX_TABIX(ENSEMBLVEP_VEP.out.vcf)
+    VEP_TABIX_TABIX(ENSEMBLVEP_VEP.out.vcf)
 
-    ch_vcf_tbi = ENSEMBLVEP_VEP.out.vcf.join(TABIX_TABIX.out.tbi, failOnDuplicate: true, failOnMismatch: true)
+    ch_vcf_tbi = ENSEMBLVEP_VEP.out.vcf.join(VEP_TABIX_TABIX.out.tbi, failOnDuplicate: true, failOnMismatch: true)
 
     // Gather versions of all tools used
     ch_versions = ch_versions.mix(ENSEMBLVEP_VEP.out.versions)
-    ch_versions = ch_versions.mix(TABIX_TABIX.out.versions)
+    ch_versions = ch_versions.mix(VEP_TABIX_TABIX.out.versions)
 
     emit:
     vcf_tbi  = ch_vcf_tbi                  // channel: [ val(meta), path(vcf), path(tbi) ]

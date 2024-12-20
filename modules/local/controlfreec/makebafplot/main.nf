@@ -1,7 +1,10 @@
 process CONTROLFREEC_MAKEBAFPLOT {
     tag "$meta.id"
     label 'process_low'
-
+    // container = 'docker.io/vanboxtelbioinformatics/asap_r:1.0'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'docker://vanboxtelbioinformatics/asap_r:1.1':
+        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/asap_r@sha256:17e59124425ae3aa17fe096418f1d61f225e9c3cae163430fbeafbc8d716d260' }"
     input:
     tuple val(meta), path(baf)
 
@@ -17,7 +20,7 @@ process CONTROLFREEC_MAKEBAFPLOT {
     def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
-    R --slave --file=${baseDir}/modules/local/controlfreec/makebafplot/bin/plotbaf.R --args ${baf} ${binsize} ${prefix}
+    R --slave --file=/ASAP_R/plotbaf.R --args ${baf} ${binsize} ${prefix}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
