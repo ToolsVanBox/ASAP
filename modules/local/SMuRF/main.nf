@@ -3,11 +3,9 @@ process SMURF {
   label 'process_single'
   
   container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'docker://vanboxtelbioinformatics/smurf:3.0.3':
-        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:b91e78c95ee172e5a68ea09022ca85b32cb1fafda85b1ae03a6f296d523ec50c' }"
-  //'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:3ea5c21b0aaf696dbdaadc851ada4fc82744ece9b03f139bca73a7299e215492' }"
-  // container = 'docker.io/vanboxtelbioinformatics/smurf:3.0.2'
-
+        'docker://vanboxtelbioinformatics/smurf:3.0.4':
+        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/smurf@sha256:bbc5bd7d50ed3ebe3ed3a38c8cf89970b244628fe2f0950ea7cbbb27846594ea' }"
+  
   input:
     tuple val(meta), path(vcf), path(tbi), path(bams), path(bai)    
     path( config )
@@ -15,7 +13,7 @@ process SMURF {
   output:
     tuple val(meta), path("*SMuRF.vcf"), emit: smurf_vcf
     tuple val(meta), path("*SMuRF.filtered.vcf"), emit: smurf_filtered_vcf
-    tuple val(meta), path("*.pdf"), emit: smurf_pdf
+    // tuple val(meta), path("*.pdf"), emit: smurf_pdf
     path "versions.yml", emit: versions
 
 
