@@ -54,8 +54,9 @@ workflow VCF_SHORT_VARIANT_ANNOTATION {
           meta.id = meta.id+".vep"
           [ meta, vcf, [] ]
         }
+        ch_plugin_files = Channel.value( file("${params.genomes[params.genome].vep_cache_dir}/*") )
 
-        VCF_ANNOTATE_ENSEMBLVEP( ch_vep_vcf, ch_fasta, params.genome, vep_species, vep_cache_version, ch_vep_cache_dir, [] )
+        VCF_ANNOTATE_ENSEMBLVEP( ch_vep_vcf, ch_fasta, params.genome, vep_species, vep_cache_version, ch_vep_cache_dir, ch_plugin_files )
         ch_versions = ch_versions.mix( VCF_ANNOTATE_ENSEMBLVEP.out.versions )
         ch_annotated_vcf_tbi = ch_annotated_vcf_tbi.mix( VCF_ANNOTATE_ENSEMBLVEP.out.vcf_tbi )
 
