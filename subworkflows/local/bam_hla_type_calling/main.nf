@@ -32,16 +32,38 @@ workflow BAM_HLA_TYPE_CALLING {
                 def lilac_slice = file( params.genomes[params.genome].lilac_slice, checkIfExists: true )
                 def lilac_chr_version = params.genomes[params.genome].lilac_chr_version
                 ch_input = Channel.empty()
+                //ch_normal_bam = ch_normal_bam.ifEmpty([ [], [], [] ])  // Ensure at least one empty value
+                //ch_tumor_bam  = ch_tumor_bam.ifEmpty([ [], [], [] ])   // Ensure at least one empty value
+
+                //ch_normal_bam.view()
+                //ch_tumor_bam.view()
+                //ch_normal_bam.ifEmpty([[:]]).combine(ch_tumor_bam).view()
 
                 // Get a combined meta from your input bam files 
-                ch_input = ch_normal_bam
-                    .combine(ch_tumor_bam)
+                ch_input = ch_normal_bam.ifEmpty([[], [], []])
+                    .combine( ch_tumor_bam.ifEmpty([[], [], []]) )
                     .map{ meta, normal_bam, normal_bai, meta2, tumor_bam, tumor_bai -> 
-                        meta = meta - meta.subMap("id","sample_type")
-                        meta = meta + [ id: meta.sample+"-"+meta2.sample ]
+                        
+                        if (meta.sample && meta2.sample){
+                            meta = meta - meta.subMap("id","sample_type")
+                            meta = meta + [ id: meta.sample+"-"+meta2.sample ]
+                        
+                        }else{
+                            if (meta.sample){
+                                meta = meta - meta.subMap("id","sample_type")
+                                meta = meta + [ id: meta.sample ]
+                            }else{
+                                meta = meta2 - meta2.subMap("id","sample_type")
+                                meta = meta + [ id: meta2.sample ]
+                            }
+                        }
                         meta = meta - meta.subMap("sample")
                         [ meta ]
                     }
+
+                
+
+                ch_input.view()
 
                 // Run Lilac for HLA-type calling 
                 BAM_HLA_TYPE_CALLING_LILAC(ch_input, ch_normal_bam, ch_tumor_bam, ch_tumor_rna_bam, ch_cnv_dir, ch_somatic_vcf,  ch_fasta, ch_fai, lilac_slice)
