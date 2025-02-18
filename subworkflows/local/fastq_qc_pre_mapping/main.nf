@@ -16,7 +16,7 @@ workflow FASTQ_QC_PRE_MAPPING {
     def run_fastqc = false 
     
     for ( tool in params.fastq_qc_pre_mapping.tool ) {
-      tool = tool.toLowerCase()      
+      def tool = tool.toLowerCase()      
       def known_tool = false
       
       // Run FastQC 
@@ -38,14 +38,14 @@ workflow FASTQ_QC_PRE_MAPPING {
 
         CUSTOM_DUMPSOFTWAREVERSIONS( ch_versions.unique().collectFile(name: 'collated_versions.yml') )
         
-        multiqc_files = Channel.empty()
+        def multiqc_files = Channel.empty()
         multiqc_files = multiqc_files.mix( CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect() )
         multiqc_files = multiqc_files.mix( FASTQC.out.zip.collect{it[1]}.ifEmpty([]) )
 
-        multiqc_custom_config = Channel.empty()
-        multiqc_logo = Channel.empty()
+        def multiqc_custom_config = Channel.empty()
+        def multiqc_logo = Channel.empty()
 
-        multiqc_config = Channel.fromPath( "$projectDir/assets/multiqc_config.yml", checkIfExists: true )
+        def multiqc_config = Channel.fromPath( "$projectDir/assets/multiqc_config.yml", checkIfExists: true )
 
         MULTIQC( multiqc_files.collect(), multiqc_config.toList(), multiqc_custom_config.toList(), multiqc_logo.toList() )
 

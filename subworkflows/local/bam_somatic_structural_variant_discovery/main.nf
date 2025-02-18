@@ -16,10 +16,10 @@ workflow BAM_SOMATIC_STRUCTURAL_VARIANT_DISCOVERY {
     ch_versions = Channel.empty()
 
     for ( tool in params.bam_somatic_structural_variant_discovery.tool ) {
-      tool = tool.toLowerCase()      
-      known_tool = false   
+      def tool = tool.toLowerCase()      
+      def known_tool = false   
 
-      ch_manta_somatic = ch_bam_bai_normal_tumor
+      def ch_manta_somatic = ch_bam_bai_normal_tumor
         .map{ meta, normal_bam, normal_bai, tumor_bam, tumor_bai ->
           [ meta, normal_bam, normal_bai, tumor_bam, tumor_bai, [], [] ]
         }

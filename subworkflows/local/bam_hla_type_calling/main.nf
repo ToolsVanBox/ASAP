@@ -21,8 +21,8 @@ workflow BAM_HLA_TYPE_CALLING {
         ch_versions = Channel.empty()
 
         for ( tool in params.bam_hla_type_calling.tool ) {
-            tool = tool.toLowerCase()      
-            known_tool = false
+            def tool = tool.toLowerCase()      
+            def known_tool = false
 
             // HMFtools Lilac
             if ( tool == "lilac" ) {
@@ -31,7 +31,7 @@ workflow BAM_HLA_TYPE_CALLING {
                 def lilac_dir = file( params.genomes[params.genome].lilac_dir, checkIfExists: true )
                 def lilac_slice = file( params.genomes[params.genome].lilac_slice, checkIfExists: true )
                 def lilac_chr_version = params.genomes[params.genome].lilac_chr_version
-                ch_input = Channel.empty()
+                def ch_input = Channel.empty()
                 //ch_normal_bam = ch_normal_bam.ifEmpty([ [], [], [] ])  // Ensure at least one empty value
                 //ch_tumor_bam  = ch_tumor_bam.ifEmpty([ [], [], [] ])   // Ensure at least one empty value
 

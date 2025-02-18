@@ -29,11 +29,11 @@ workflow VCF_SHORT_VARIANT_ANNOTATION {
           .map{ cache -> [ [ id:'snpeff_cache' ], cache ] }
 
     for ( tool in params.vcf_short_variant_annotation.tool ) {
-      tool = tool.toLowerCase()      
-      known_tool = false    
+      def tool = tool.toLowerCase()      
+      def known_tool = false    
 
       if ( tool == "snpeff" ) {
-        ch_snpeff_vcf = ch_vcf.map{ meta, vcf -> 
+        def ch_snpeff_vcf = ch_vcf.map{ meta, vcf -> 
           meta = meta + [ann: "snpeff" ]
           meta.id = meta.id+".snpeff"
           [ meta, vcf ]
@@ -48,13 +48,13 @@ workflow VCF_SHORT_VARIANT_ANNOTATION {
       if (tool == "vep" ) {
         // unzip input to avoid broken pipe error: 
         TABIX_BGZIP( ch_vcf )
-        ch_vep_vcf = TABIX_BGZIP.out.output
+        def ch_vep_vcf = TABIX_BGZIP.out.output
         ch_vep_vcf = ch_vep_vcf.map{ meta, vcf -> 
           meta = meta + [ann: "vep" ]
           meta.id = meta.id+".vep"
           [ meta, vcf, [] ]
         }
-        ch_plugin_files = Channel.value( file("${params.genomes[params.genome].vep_cache_dir}/*") )
+        def ch_plugin_files = Channel.value( file("${params.genomes[params.genome].vep_cache_dir}/*") )
 
         VCF_ANNOTATE_ENSEMBLVEP( ch_vep_vcf, ch_fasta, params.genome, vep_species, vep_cache_version, ch_vep_cache_dir, ch_plugin_files )
         ch_versions = ch_versions.mix( VCF_ANNOTATE_ENSEMBLVEP.out.versions )

@@ -18,8 +18,8 @@ workflow CRAM_CONVERT_TO_BAM {
     fai = ch_fai.map{ meta, fai -> [ fai ] }
 
     for ( tool in params.cram_convert_to_bam.tool ) {
-      tool = tool.toLowerCase()      
-      known_tool = false    
+      def tool = tool.toLowerCase()      
+      def known_tool = false    
 
       // Run Picard Fingerprint
       if ( tool == "samtools" ) {

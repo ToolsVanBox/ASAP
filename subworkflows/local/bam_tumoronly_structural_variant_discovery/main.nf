@@ -16,8 +16,8 @@ workflow BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY {
     ch_versions = Channel.empty()
 
     for ( tool in params.bam_tumoronly_structural_variant_discovery.tool ) {
-      tool = tool.toLowerCase()      
-      known_tool = false   
+      def tool = tool.toLowerCase()      
+      def known_tool = false   
       
       if ( tool == "manta" ) {
         BAM_TUMORONLY_STRUCTURAL_VARIANT_DISCOVERY_MANTA( ch_bam_bai_tumor, ch_fasta, ch_fai )

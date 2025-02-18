@@ -23,12 +23,12 @@ workflow BAM_MARKDUPLICATES {
     ch_dedup_bai = Channel.empty()
       
     for ( tool in params.bam_markduplicates.tool ) {
-      tool = tool.toLowerCase()      
-      known_tool = false    
+      def tool = tool.toLowerCase()      
+      def known_tool = false    
 
       // Run Picard Markduplicates
       if ( tool == "picard" ) {          
-          ch_bams_picard = ch_bam_bai
+          def ch_bams_picard = ch_bam_bai
             .map{ meta, bam, bai -> 
               meta = meta + [ dedup: "picard" ]
               meta.id = meta.id+".picard.dedup"
@@ -46,7 +46,7 @@ workflow BAM_MARKDUPLICATES {
 
       // Run Samtools Markduplicates
       if ( tool == "samtools" ) {   
-          ch_bams_samtools = ch_bam_bai
+          def ch_bams_samtools = ch_bam_bai
             .map{ meta, bam, bai -> 
               meta = meta + [ dedup: "samtools" ]
               meta.id = meta.id+".samtools.dedup"
@@ -65,7 +65,7 @@ workflow BAM_MARKDUPLICATES {
 
       // Run GATK4 Spark Markduplicates
       if ( tool == "gatk4spark" ) {
-          ch_bams_spark = ch_bam_bai
+          def ch_bams_spark = ch_bam_bai
             .map{ meta, bam, bai -> 
               meta = meta + [ dedup: "gatk4spark" ]
               meta.id = meta.id+".gatk4spark.dedup"
@@ -84,7 +84,7 @@ workflow BAM_MARKDUPLICATES {
 
       // Run GATK4 Markduplicates
       if ( tool == "gatk4" ) {
-        ch_bams_gatk = ch_bam_bai
+        def ch_bams_gatk = ch_bam_bai
             .map{ meta, bam, bai -> 
               meta = meta + [ dedup: "gatk4" ]
               meta.id = meta.id+".gatk4.dedup"

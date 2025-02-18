@@ -22,12 +22,12 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY {
      ch_germline_tbi = Channel.empty()
       
     for ( tool in params.bam_germline_short_variant_discovery.tool ) {
-      tool = tool.toLowerCase()      
-      known_tool = false    
+      def tool = tool.toLowerCase()      
+      def known_tool = false    
 
       if ( tool == "gatk4haplotypecaller" ) {
                        
-        ch_bam_bai_interval = ch_bam_bai
+        def ch_bam_bai_interval = ch_bam_bai
           .combine( ch_intervals )
           .map{ meta, bam, bai, meta2, interval_file -> 
               meta = meta + [ calling_type: "germline" ] 
@@ -40,7 +40,7 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY {
         BAM_BASE_RECALIBRATION_GATK4( ch_bam_bai_interval, ch_fasta, ch_fai, ch_dict )
         ch_versions = ch_versions.mix( BAM_BASE_RECALIBRATION_GATK4.out.versions ) 
         
-        ch_bam_bai_interval_bqsr = BAM_BASE_RECALIBRATION_GATK4.out.bam
+        def ch_bam_bai_interval_bqsr = BAM_BASE_RECALIBRATION_GATK4.out.bam
           .join( BAM_BASE_RECALIBRATION_GATK4.out.bai )
           .combine( ch_intervals )
           .map{ meta, bam, bai, meta2, interval_file ->
