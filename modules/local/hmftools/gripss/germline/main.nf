@@ -30,10 +30,10 @@ process HMFTOOLS_GRIPSS_GERMLINE {
     def reference = meta.tumor_sample_id
     def sample = meta.normal_sample_id
     def args = task.ext.args ?: ''
-    def known_hotspot_file = known_hotspot_file ? "-known_hotspot_file ${known_hotspot_file}" : ""
-    def pon_sgl_file = pon_sgl_file ? "-pon_sgl_file ${pon_sgl_file}" : ""
-    def pon_sv_file = pon_sv_file ? "-pon_sv_file ${pon_sv_file}" : ""
-    def repeat_mask_file = repeat_mask_file ? "-repeat_mask_file ${repeat_mask_file}" : ""
+    known_hotspot_file = known_hotspot_file ? "-known_hotspot_file ${known_hotspot_file}" : ""
+    pon_sgl_file = pon_sgl_file ? "-pon_sgl_file ${pon_sgl_file}" : ""
+    pon_sv_file = pon_sv_file ? "-pon_sv_file ${pon_sv_file}" : ""
+    repeat_mask_file = repeat_mask_file ? "-repeat_mask_file ${repeat_mask_file}" : ""
     def VERSION = '2.3.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """    

@@ -26,7 +26,7 @@ process HMFTOOLS_COBALT_SOMATIC {
     def args = task.ext.args ?: ''
     def tumor = meta.tumor_sample_id
     def reference = meta.normal_sample_id
-    def gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
+    gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
 
     def VERSION = '1.13' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     

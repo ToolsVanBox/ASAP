@@ -36,9 +36,9 @@ process HMFTOOLS_PURPLE_TUMORONLY {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
     def tumor = meta.id
-    def gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
+    gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
     def run_drivers = driver_gene_panel ? "-run_drivers -driver_gene_panel ${driver_gene_panel}" : ""
-    def known_hotspot_file = known_hotspot_file ? "-somatic_hotspots ${known_hotspot_file}" : ""
+    known_hotspot_file = known_hotspot_file ? "-somatic_hotspots ${known_hotspot_file}" : ""
     def VERSION = '3.7.1' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """ 

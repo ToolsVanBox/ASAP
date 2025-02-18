@@ -39,9 +39,9 @@ process HMFTOOLS_PURPLE_SOMATIC {
     def args = task.ext.args ?: ''
     def tumor = meta.tumor_sample_id
     def reference = meta.normal_sample_id    
-    def gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
+    gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
     def run_drivers = driver_gene_panel ? "-run_drivers -driver_gene_panel ${driver_gene_panel}" : ""
-    def known_hotspot_file = known_hotspot_file ? "-somatic_hotspots ${known_hotspot_file}" : ""
+    known_hotspot_file = known_hotspot_file ? "-somatic_hotspots ${known_hotspot_file}" : ""
     def VERSION = '3.7.1' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """ 

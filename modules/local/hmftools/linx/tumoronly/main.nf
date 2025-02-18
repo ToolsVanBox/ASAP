@@ -35,8 +35,8 @@ process HMFTOOLS_LINX_TUMORONLY {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
     def sample = meta.id
-    def driver_gene_panel = driver_gene_panel ? "-driver_gene_panel ${driver_gene_panel}" : ""
-    def known_fusion_file = known_fusion_file ? "-known_fusion_file ${known_fusion_file}" : ""
+    driver_gene_panel = driver_gene_panel ? "-driver_gene_panel ${driver_gene_panel}" : ""
+    known_fusion_file = known_fusion_file ? "-known_fusion_file ${known_fusion_file}" : ""
     def VERSION = '1.23.6' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     """ 

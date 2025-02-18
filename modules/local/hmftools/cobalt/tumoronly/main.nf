@@ -25,8 +25,8 @@ process HMFTOOLS_COBALT_TUMORONLY {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
     def tumor = meta.id
-    def gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
-    def tumor_only_diploid_bed = tumor_only_diploid_bed ? "-tumor_only_diploid_bed ${tumor_only_diploid_bed}" : ""
+    gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
+    tumor_only_diploid_bed = tumor_only_diploid_bed ? "-tumor_only_diploid_bed ${tumor_only_diploid_bed}" : ""
 
     def VERSION = '1.13' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
