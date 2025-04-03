@@ -226,7 +226,7 @@ workflow ASAP {
 
     ch_bam_bai_sample_type = ch_bam_bai.branch{
         normal: it[0].sample_type == "normal"
-        tumor:  it[0].sample_type == "tumor"
+        tumor: it[0].sample_type == "tumor"
     }
      
     // Somatic calling input preparation 
@@ -342,7 +342,7 @@ workflow ASAP {
     // HLA type calling 
     if (params.run.bam_hla_type_calling) {
         ch_hla_vcf = ch_hla_sc_vcf.mix( ch_hla_sf_vcf )
-        
+
         BAM_HLA_TYPE_CALLING(ch_bam_bai_sample_type.normal, ch_bam_bai_sample_type.tumor, ch_rna_bam, ch_cnv_dir, ch_hla_vcf,  ch_fasta, ch_fai)
         ch_versions = ch_versions.mix( BAM_HLA_TYPE_CALLING.out.versions )
     }
