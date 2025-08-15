@@ -24,8 +24,8 @@ workflow BAM_SOMATIC_SHORT_VARIANT_DISCOVERY {
     ch_somatic_stats = Channel.empty()
       
     for ( tool in params.bam_somatic_short_variant_discovery.tool ) {
-      tool = tool.toLowerCase()      
-      known_tool = false    
+      def tool = tool.toLowerCase()      
+      def known_tool = false    
 
       if ( tool == "mutect2" ) {
         BAM_SOMATIC_SHORT_VARIANT_DISCOVERY_MUTECT2( ch_bam_bai_tumor, ch_bam_bai_normal, ch_split_interval, ch_fasta, ch_fai, ch_dict )

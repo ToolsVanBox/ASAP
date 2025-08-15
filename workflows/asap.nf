@@ -37,7 +37,9 @@ include { BAM_HLA_TYPE_CALLING } from '../subworkflows/local/bam_hla_type_callin
 
  
 // Include nf-core modules
-include { GATK4_SPLITINTERVALS } from '../modules/nf-core/gatk4/splitintervals/main'                                                                          
+include { GATK4_SPLITINTERVALS } from '../modules/nf-core/gatk4/splitintervals/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main.nf'
+
 
 ch_input = parseSampleSheet( Channel.fromSamplesheet("input") )
 
@@ -346,8 +348,8 @@ workflow ASAP {
     }
 
     
-//     // CUSTOM_DUMPSOFTWAREVERSIONS(ch_versions.unique().collectFile(name: 'collated_versions.yml'))
-//     // version_yaml = CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect()
+    CUSTOM_DUMPSOFTWAREVERSIONS(ch_versions.unique().collectFile(name: 'collated_versions.yml'))
+    version_yaml = CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect()
 }
 
 def parseSampleSheet( ch_csv ) {

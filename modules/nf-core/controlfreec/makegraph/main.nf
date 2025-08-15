@@ -23,7 +23,7 @@ process CONTROLFREEC_MAKEGRAPH {
     script:
     def args = task.ext.args ?: ""
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def baf = baf ?: ""
+    baf = baf ?: ""
     """
     cat \$(which makeGraph.R) | R --slave --args ${ploidy} ${args} ${ratio} ${baf}
 

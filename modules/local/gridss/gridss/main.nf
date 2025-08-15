@@ -29,14 +29,8 @@ process GRIDSS {
     def args = task.ext.args ?: ''
     def bams = gridss_bams.collect{"$it"}.join(' ')
     def labels = gridss_labels.collect{"$it"}.join(',')
-    def blacklist = blacklist ? "--blacklist ${blacklist}" : ""
-    def gridss_properties = gridss_properties ? "--configuration ${gridss_properties}" : ""
-    // def labels = meta.normal_sample_id ? "--labels ${meta.normal_sample_id}" : ""
-    // if ( labels == "" ) {
-    //     labels = meta.tumor_sample_id ? "--labels ${meta.tumor_sample_id}" : "--labels ${meta.id}" 
-    // } else {
-    //     labels = meta.tumor_sample_id ? labels+",${meta.tumor_sample_id}" : labels+"${meta.id}" 
-    // }
+    blacklist = blacklist ? "--blacklist ${blacklist}" : ""
+    gridss_properties = gridss_properties ? "--configuration ${gridss_properties}" : ""
     def VERSION = '2.13.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """    
@@ -64,7 +58,7 @@ process GRIDSS {
     stub:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def meta = [ id: ${prefix} ]
+    meta = [ id: ${prefix} ]
     def VERSION = '2.13.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     def steps = args.contains("-s ") ? args.split('-s ')[-1].split(" ")[0] :

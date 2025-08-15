@@ -19,8 +19,8 @@ workflow VCF_GERMLINE_SHORT_VARIANT_FILTRATION {
     ch_tbi = Channel.empty()
 
     for ( tool in params.vcf_germline_short_variant_filtration.tool ) {
-      tool = tool.toLowerCase()      
-      known_tool = false    
+      def tool = tool.toLowerCase()      
+      def known_tool = false    
 
       if ( tool == "gatk4" ) {
         

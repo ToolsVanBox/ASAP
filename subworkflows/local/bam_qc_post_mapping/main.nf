@@ -15,12 +15,12 @@ workflow BAM_QC_POST_MAPPING {
     ch_versions = Channel.empty()
 
     for ( tool in params.bam_qc_post_mapping.tool ) {
-      tool = tool.toLowerCase()      
+      def tool = tool.toLowerCase()      
       def known_tool = false
       
       // Run Picard 
       if ( tool  == "picard" ) {
-          ch_bam_bai_picard = ch_bam_bai.map{ meta, bam, bai -> [ meta, bam, bai, [], [] ] }
+          def ch_bam_bai_picard = ch_bam_bai.map{ meta, bam, bai -> [ meta, bam, bai, [], [] ] }
 
           BAM_QC_PICARD( ch_bam_bai_picard, ch_fasta, ch_fai, ch_dict )
           ch_versions = ch_versions.mix( BAM_QC_PICARD.out.versions.first() )
