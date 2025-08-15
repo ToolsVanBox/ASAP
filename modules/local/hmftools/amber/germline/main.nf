@@ -24,7 +24,7 @@ process HMFTOOLS_AMBER_GERMLINE {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"    
     def reference = meta.id
-    bafsnps = bafsnps ? "-loci ${bafsnps}" : ""
+    def bafsnps = bafsnps ? "-loci ${bafsnps}" : ""
     def VERSION = '3.9' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """    

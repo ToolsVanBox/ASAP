@@ -32,10 +32,10 @@ process HMFTOOLS_PURPLE_GERMLINE {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
     def reference = meta.id
-    gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
+    def gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
     def run_drivers = driver_gene_panel ? "-run_drivers -driver_gene_panel ${driver_gene_panel}" : ""
-    known_hotspot_file = known_hotspot_file ? "-germline_hotspots ${known_hotspot_file}" : ""
-    del_freq_file = del_freq_file ? "-germline_del_freq_file ${del_freq_file}" : ""
+    def known_hotspot_file = known_hotspot_file ? "-germline_hotspots ${known_hotspot_file}" : ""
+    def del_freq_file = del_freq_file ? "-germline_del_freq_file ${del_freq_file}" : ""
     def VERSION = '3.7.1' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """ 

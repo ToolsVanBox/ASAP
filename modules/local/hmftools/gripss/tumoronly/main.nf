@@ -29,10 +29,10 @@ process HMFTOOLS_GRIPSS_TUMORONLY {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def sample = meta.id
     def args = task.ext.args ?: ''
-    known_hotspot_file = known_hotspot_file ? "-known_hotspot_file ${known_hotspot_file}" : ""
-    pon_sgl_file = pon_sgl_file ? "-pon_sgl_file ${pon_sgl_file}" : ""
-    pon_sv_file = pon_sv_file ? "-pon_sv_file ${pon_sv_file}" : ""
-    repeat_mask_file = repeat_mask_file ? "-repeat_mask_file ${repeat_mask_file}" : ""
+    def known_hotspot_file = known_hotspot_file ? "-known_hotspot_file ${known_hotspot_file}" : ""
+    def pon_sgl_file = pon_sgl_file ? "-pon_sgl_file ${pon_sgl_file}" : ""
+    def pon_sv_file = pon_sv_file ? "-pon_sv_file ${pon_sv_file}" : ""
+    def repeat_mask_file = repeat_mask_file ? "-repeat_mask_file ${repeat_mask_file}" : ""
     def VERSION = '2.3.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """    

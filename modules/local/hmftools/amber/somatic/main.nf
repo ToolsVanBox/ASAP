@@ -28,7 +28,7 @@ process HMFTOOLS_AMBER_SOMATIC {
     def args = task.ext.args ?: ''
     def tumor = meta.tumor_sample_id
     def reference = meta.normal_sample_id
-    bafsnps = bafsnps ? "-loci ${bafsnps}" : ""
+    def bafsnps = bafsnps ? "-loci ${bafsnps}" : ""
     def VERSION = '3.9' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
     """    

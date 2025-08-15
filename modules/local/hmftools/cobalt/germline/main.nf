@@ -24,7 +24,7 @@ process HMFTOOLS_COBALT_GERMLINE {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
     def reference = meta.id
-    gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
+    def gc_profile = gc_profile ? "-gc_profile ${gc_profile}" : ""
 
     def VERSION = '1.13' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     
