@@ -19,8 +19,8 @@ workflow VCF_STRUCTURAL_VARIANT_FILTRATION {
     ch_versions = Channel.empty()
     
     for ( tool in params.vcf_structural_variant_filtration.tool ) {
-      def tool = tool.toLowerCase()      
-      def known_tool = false    
+      tool = tool.toLowerCase()      
+      known_tool = false    
 
       if ( tool == "gridss_purple_linx" ) {
         

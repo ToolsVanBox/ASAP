@@ -19,8 +19,8 @@ workflow BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY {
     ch_gridss_vcf = Channel.empty()
     
     for ( tool in params.bam_germline_structural_variant_discovery.tool ) {
-      def tool = tool.toLowerCase()      
-      def known_tool = false   
+      tool = tool.toLowerCase()      
+      known_tool = false   
       
       if ( tool == "gridss" ) {
         BAM_GERMLINE_STRUCTURAL_VARIANT_DISCOVERY_GRIDSS( ch_bam_bai, ch_fasta, ch_fai, ch_fasta_dict )

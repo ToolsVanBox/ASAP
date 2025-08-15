@@ -12,8 +12,8 @@ workflow BAM_TELOMERES {
     ch_versions = Channel.empty() 
     
     for ( tool in params.bam_telomeres.tool ) {
-      def tool = tool.toLowerCase()      
-      def known_tool = false    
+      tool = tool.toLowerCase()      
+      known_tool = false    
 
       // Run Telomerecat bam2length
       if ( tool == "telomerecat" ) {

@@ -19,7 +19,7 @@ workflow FASTQ_ALIGN {
     ch_align_bai = Channel.empty()    
 
     for ( tool in params.fastq_align.tool ) {
-      def tool = tool.toLowerCase()      
+      tool = tool.toLowerCase()      
       def known_tool = false    
 
       // Run BWA MEM 1
@@ -41,9 +41,9 @@ workflow FASTQ_ALIGN {
           }
 
           // Align fastq per lane
-          def bam_sort = params.fastq_align.bam_sort
+          bam_sort = params.fastq_align.bam_sort
 
-          def ch_fastq_bwa = ch_fastq
+          ch_fastq_bwa = ch_fastq
             .map{ meta, bam ->              
               meta = meta + [align: "bwamem1" ]
               meta.id = meta.id+".bwamem1"
@@ -78,9 +78,9 @@ workflow FASTQ_ALIGN {
           }
 
           // Align fastq per lane
-          def bam_sort = params.fastq_align.bam_sort
+          bam_sort = params.fastq_align.bam_sort
 
-          def ch_fastq_bwamem2 = ch_fastq
+          ch_fastq_bwamem2 = ch_fastq
             .map{ meta, bam ->
               meta = meta + [ align: "bwamem2" ]
               meta.id = meta.id+".bwamem2"

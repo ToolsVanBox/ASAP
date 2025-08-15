@@ -27,8 +27,8 @@ workflow VCF_SOMATIC_SHORT_VARIANT_FILTRATION {
     ch_stats = Channel.empty()
 
     for ( tool in params.vcf_somatic_short_variant_filtration.tool ) {
-      def tool = tool.toLowerCase()      
-      def known_tool = false    
+      tool = tool.toLowerCase()      
+      known_tool = false    
 
       if ( tool == "mutect2" ) {
         

@@ -21,8 +21,8 @@ workflow BAM_HLA_TYPE_CALLING {
         ch_versions = Channel.empty()
 
         for ( tool in params.bam_hla_type_calling.tool ) {
-            def tool = tool.toLowerCase()      
-            def known_tool = false
+            tool = tool.toLowerCase()      
+            known_tool = false
 
             // HMFtools Lilac
             if ( tool == "lilac" ) {
@@ -31,39 +31,17 @@ workflow BAM_HLA_TYPE_CALLING {
                 def lilac_dir = file( params.genomes[params.genome].lilac_dir, checkIfExists: true )
                 def lilac_slice = file( params.genomes[params.genome].lilac_slice, checkIfExists: true )
                 def lilac_chr_version = params.genomes[params.genome].lilac_chr_version
-                def ch_input = Channel.empty()
-                //ch_normal_bam = ch_normal_bam.ifEmpty([ [], [], [] ])  // Ensure at least one empty value
-                //ch_tumor_bam  = ch_tumor_bam.ifEmpty([ [], [], [] ])   // Ensure at least one empty value
-
-                //ch_normal_bam.view()
-                //ch_tumor_bam.view()
-                //ch_normal_bam.ifEmpty([[:]]).combine(ch_tumor_bam).view()
+                ch_input = Channel.empty()
 
                 // Get a combined meta from your input bam files 
-                ch_input = ch_normal_bam.ifEmpty([[], [], []])
-                    .combine( ch_tumor_bam.ifEmpty([[], [], []]) )
+                ch_input = ch_normal_bam
+                    .combine(ch_tumor_bam)
                     .map{ meta, normal_bam, normal_bai, meta2, tumor_bam, tumor_bai -> 
-                        
-                        if (meta.sample && meta2.sample){
-                            meta = meta - meta.subMap("id","sample_type")
-                            meta = meta + [ id: meta.sample+"-"+meta2.sample ]
-                        
-                        }else{
-                            if (meta.sample){
-                                meta = meta - meta.subMap("id","sample_type")
-                                meta = meta + [ id: meta.sample ]
-                            }else{
-                                meta = meta2 - meta2.subMap("id","sample_type")
-                                meta = meta + [ id: meta2.sample ]
-                            }
-                        }
+                        meta = meta - meta.subMap("id","sample_type")
+                        meta = meta + [ id: meta.sample+"-"+meta2.sample ]
                         meta = meta - meta.subMap("sample")
                         [ meta ]
                     }
-
-                
-
-                ch_input.view()
 
                 // Run Lilac for HLA-type calling 
                 BAM_HLA_TYPE_CALLING_LILAC(ch_input, ch_normal_bam, ch_tumor_bam, ch_tumor_rna_bam, ch_cnv_dir, ch_somatic_vcf,  ch_fasta, ch_fai, lilac_slice)

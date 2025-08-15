@@ -24,11 +24,11 @@ workflow BAM_MERGE {
         ch_merged_idxstats = Channel.empty()
             
         for ( tool in params.bam_merge.tool ) {
-            def tool = tool.toLowerCase()      
+            tool = tool.toLowerCase()      
             def known_tool = false    
 
             if ( tool == "samtools" ) {
-                def ch_bams_samtools = ch_bams
+                ch_bams_samtools = ch_bams
                      .map{ meta, bam ->              
                         meta = meta + [ merge: "samtools" ]
                         meta.id = meta.id+".samtools"

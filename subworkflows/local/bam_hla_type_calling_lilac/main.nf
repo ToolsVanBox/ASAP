@@ -38,7 +38,6 @@ workflow BAM_HLA_TYPE_CALLING_LILAC {
         // Parse the fixed variable to be taken by lilac 
         genome_fasta = genome_fasta.map{meta, fasta_path -> [ fasta_path ] }.collect()
         genome_fai = genome_fai.map{meta, fai_path -> [ fai_path ] }.collect()
-        ch_bwamem2_index = Channel.value( file("${params.genomes[params.genome].lilac_bwamem2_index}/*") )
 
         // Do the optionial parameter check 
         tumor_rna_bam_ch = ch_tumor_rna_bam ? ch_tumor_rna_bam.map{ meta, bam, bai -> [ bam ] } : Channel.empty()
@@ -57,7 +56,20 @@ workflow BAM_HLA_TYPE_CALLING_LILAC {
                 hla_slice_bed,
             )
             ch_versions = ch_versions.mix(SLICEBAM.out.versions)
+            
+            // Extract contig 
+            ch_extract_contig_run = ch_realign_inputs_sorted
+                .toList()
+                .map { !it.isEmpty() }
 
+            EXTRACTCONTIG(
+                params.genomes[params.genome].lilac_chr,
+                genome_fasta,
+                genome_fai,
+                ch_extract_contig_run,
+            )
+            ch_versions = ch_versions.mix(EXTRACTCONTIG.out.versions)
+            
             // Realign reads
             ch_realign_bam = SLICEBAM.out.bam.map{ meta, bam, bai -> 
                 meta.sample_id = meta.id
@@ -66,8 +78,8 @@ workflow BAM_HLA_TYPE_CALLING_LILAC {
             
             REALIGNREADS(
                 ch_realign_bam,
-                params.genomes[params.genome].lilac_contig, 
-                ch_bwamem2_index
+                EXTRACTCONTIG.out.contig,
+                EXTRACTCONTIG.out.bwamem2_index,
             )
             ch_versions = ch_versions.mix(REALIGNREADS.out.versions)
 
@@ -90,10 +102,6 @@ workflow BAM_HLA_TYPE_CALLING_LILAC {
             tumor_dna_bai_ch = ch_tumor_bam ? ch_tumor_bam.map{ meta, bam, bai -> [ bai ] } : Channel.empty()
         }
         
-        //REALIGNREADS.out.bam.branch.view()
-        //ch_input.view()
-        //tumor_dna_bam_ch.view()
-        //tumor_dna_bai_ch.view()
 
         // Run Lilac with optional parameters 
         LILAC(

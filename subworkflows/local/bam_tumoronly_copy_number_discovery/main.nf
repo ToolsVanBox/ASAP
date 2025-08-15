@@ -30,8 +30,8 @@ workflow BAM_TUMORONLY_COPY_NUMBER_DISCOVERY {
     }
 
     for ( tool in params.bam_tumoronly_copy_number_discovery.tool ) {
-      def tool = tool.toLowerCase()      
-      def known_tool = false    
+      tool = tool.toLowerCase()      
+      known_tool = false    
 
       if ( tool == "controlfreec" ) {
         

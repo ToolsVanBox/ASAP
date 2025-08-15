@@ -103,15 +103,15 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
         if ( known_site_file =~/indels/ ) {
           known_indels.add( known_site_file )
           known_indels_tbi.add( known_site_tbi_file )
-          def resource = file(known_site_file).getSimpleName()
-          def label = "--resource:${resource},${params.bam_germline_short_variant_discovery_haplotypecaller.gatk4variantrecalibrator_label} ${known_site_file}"
+          resource = file(known_site_file).getSimpleName()
+          label = "--resource:${resource},${params.bam_germline_short_variant_discovery_haplotypecaller.gatk4variantrecalibrator_label} ${known_site_file}"
           known_indels_labels.add( label )
         }
         if ( known_site_file =~/snps/ ) {
           known_snps.add( known_site_file )
           known_snps_tbi.add( known_site_tbi_file )
-          def resource = file(known_site_file).getSimpleName()
-          def label = "--resource:${resource},${params.bam_germline_short_variant_discovery_haplotypecaller.gatk4variantrecalibrator_label} ${known_site_file}"
+          resource = file(known_site_file).getSimpleName()
+          label = "--resource:${resource},${params.bam_germline_short_variant_discovery_haplotypecaller.gatk4variantrecalibrator_label} ${known_site_file}"
           known_snps_labels.add( label )
         }  
       }
