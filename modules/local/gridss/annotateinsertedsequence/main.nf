@@ -22,7 +22,7 @@ process GRIDSS_ANNOTATEINSERTEDSEQUENCE {
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
     def args = task.ext.args ?: ''
-    repeatmaskerbed = repeatmaskerbed ? "REPEAT_MASKER_BED=${repeatmaskerbed}" : ""
+    def repeatmaskerbed = repeatmaskerbed ? "REPEAT_MASKER_BED=${repeatmaskerbed}" : ""
     def VERSION = '2.13.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     """ 
