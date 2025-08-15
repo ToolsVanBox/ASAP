@@ -35,11 +35,9 @@ include { VCF_GERMLINE_SHORT_VARIANT_SOMATIC_FILTRATION } from '../subworkflows/
 
 include { BAM_HLA_TYPE_CALLING } from '../subworkflows/local/bam_hla_type_calling/main.nf'
 
- 
 // Include nf-core modules
 include { GATK4_SPLITINTERVALS } from '../modules/nf-core/gatk4/splitintervals/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main.nf'
-
 
 ch_input = parseSampleSheet( Channel.fromSamplesheet("input") )
 
@@ -317,7 +315,7 @@ workflow ASAP {
     }
 
     // Structural variant filtration
-    if ( params.run.vcf_somatic_structural_variant_filtration || params.run.vcf_germline_structural_variant_filtration || params.run.vcf_tumoronly_structural_variant_filtration ) {
+    if ( params.run.vcf_somatic_structural_variant_filtration || params.run.vcf_germline_structural_variant_filtration || params.run.vcf_tumoronly_structural_variant_filtration || params.run.vcf_structural_variant_filtration ) {
         
         VCF_STRUCTURAL_VARIANT_FILTRATION( ch_gridss_vcf, ch_bam_bai_sample_type.normal, ch_bam_bai_sample_type.tumor, ch_fasta, ch_fai, ch_fasta_dict )
         ch_versions = ch_versions.mix( VCF_STRUCTURAL_VARIANT_FILTRATION.out.versions )
