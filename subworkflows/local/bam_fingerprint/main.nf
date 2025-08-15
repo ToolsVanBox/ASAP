@@ -19,12 +19,12 @@ workflow BAM_FINGERPRINT {
     ch_haplotype = Channel.value( haplotype_file )
     
     for ( tool in params.bam_fingerprint.tool ) {
-      def tool = tool.toLowerCase()      
-      def known_tool = false    
+      tool = tool.toLowerCase()      
+      known_tool = false    
 
       // Run Picard Fingerprint
       if ( tool == "picard" ) {
-          def ch_bam_bai_picard = ch_bam_bai.map{ meta, bam, bai -> [ [ id:meta.run_id ], bam ] }.groupTuple()
+          ch_bam_bai_picard = ch_bam_bai.map{ meta, bam, bai -> [ [ id:meta.run_id ], bam ] }.groupTuple()
 
           BAM_FINGERPRINT_PICARD( ch_bam_bai_picard, [], ch_haplotype )   
           ch_versions = ch_versions.mix( BAM_FINGERPRINT_PICARD.out.versions )  
