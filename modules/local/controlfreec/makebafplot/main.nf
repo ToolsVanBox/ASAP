@@ -24,7 +24,7 @@ process CONTROLFREEC_MAKEBAFPLOT {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        R: \$(echo \$(R --version 2>&1) ) |  grep -oP "R version .+ --" | cut -f 3 -d' '
+        R: \$(echo \$(R --version 2>&1) |  grep -oP "R version .+ --" | cut -f 3 -d' ' )
     END_VERSIONS
     """
 
@@ -35,7 +35,7 @@ process CONTROLFREEC_MAKEBAFPLOT {
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        R: \$(echo \$(R --version 2>&1) ) |  grep -oP "R version .+ --" | cut -f 3 -d' '
+	R: \$(echo \$(R --version 2>&1) |  grep -oP "R version .+ --" | cut -f 3 -d' ' )
     END_VERSIONS
     """
 }
