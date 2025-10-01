@@ -345,7 +345,6 @@ workflow ASAP {
         ch_versions = ch_versions.mix( BAM_HLA_TYPE_CALLING.out.versions )
     }
 
-    
     CUSTOM_DUMPSOFTWAREVERSIONS(ch_versions.unique().collectFile(name: 'collated_versions.yml'))
     version_yaml = CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect()
 }
