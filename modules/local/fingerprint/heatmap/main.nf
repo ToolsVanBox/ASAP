@@ -5,7 +5,7 @@ process FINGERPRINT_HEATMAP {
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'docker://vanboxtelbioinformatics/asap_r:1.1':
-        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/asap_r@sha256:17e59124425ae3aa17fe096418f1d61f225e9c3cae163430fbeafbc8d716d260' }"
+        params.artifact_registry_path + '/asap_r@sha256:17e59124425ae3aa17fe096418f1d61f225e9c3cae163430fbeafbc8d716d260' }"
 
 
     input:

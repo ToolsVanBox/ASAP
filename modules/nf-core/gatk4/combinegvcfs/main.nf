@@ -5,7 +5,7 @@ process GATK4_COMBINEGVCFS {
     // conda "bioconda::gatk4=4.4.0.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/gatk4:4.4.0.0--py36hdfd78af_0':
-        'europe-west4-docker.pkg.dev/pmc-gcp-box-d-pip-development/pipeline-containers/gatk4@sha256:573f43fe59145d65106e5b2647d5c0f1662820716234a04104dfe1c91ebfa4be' }"
+        params.artifact_registry_path + '/gatk4@sha256:573f43fe59145d65106e5b2647d5c0f1662820716234a04104dfe1c91ebfa4be' }"
 //        'biocontainers/gatk4:4.4.0.0--py36hdfd78af_0' }"
 
     input:
