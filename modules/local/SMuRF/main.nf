@@ -4,7 +4,7 @@ process SMURF {
   
   container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'docker://vanboxtelbioinformatics/smurf:3.0.4':
-        params.artifact_registry_path + '/smurf@sha256:bbc5bd7d50ed3ebe3ed3a38c8cf89970b244628fe2f0950ea7cbbb27846594ea' }"
+        params.artifact_registry_path + '/smurf:3.0.4' }"
   
   input:
     tuple val(meta), path(vcf), path(tbi), path(bams), path(bai)    

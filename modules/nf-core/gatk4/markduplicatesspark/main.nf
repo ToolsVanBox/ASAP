@@ -5,7 +5,7 @@ process GATK4_MARKDUPLICATES_SPARK {
     // conda "bioconda::gatk4=4.4.0.0 conda-forge::openjdk=8.0.312"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/mulled-v2-d9e7bad0f7fbc8f4458d5c3ab7ffaaf0235b59fb:f857e2d6cc88d35580d01cf39e0959a68b83c1d9-0':
-        params.artifact_registry_path + '/gatk4@sha256:573f43fe59145d65106e5b2647d5c0f1662820716234a04104dfe1c91ebfa4be' }"
+        params.artifact_registry_path + '/gatk4:4.4.0.0--py36hdfd78af_0' }"
 //        'biocontainers/mulled-v2-d9e7bad0f7fbc8f4458d5c3ab7ffaaf0235b59fb:f857e2d6cc88d35580d01cf39e0959a68b83c1d9-0' }"
         
     input:
