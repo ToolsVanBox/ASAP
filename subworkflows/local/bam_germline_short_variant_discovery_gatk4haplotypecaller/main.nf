@@ -92,7 +92,29 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
     known_snps_tbi = []
     known_snps_labels = []
 
-    for ( known_site_file in params.genomes[params.genome].known_sites ) {
+    ch_resources_snp = channel.fromList(params.genomes[params.genome].known_vsqr_snp)
+    .multiMap { name, label, vcf_path ->
+        vcfs:   file(vcf_path)
+        tbis:   file("${vcf_path}.tbi")
+        labels: "--resource:${name},${label}"
+    }
+
+    known_snps   = ch_resources_snp.vcfs.toList()
+    known_snps_tbi   = ch_resources_snp.tbis.toList()
+    known_snps_labels = ch_resources_snp.labels.toList()
+
+    ch_resources_indel = channel.fromList(params.genomes[params.genome].known_vsqr_indel)
+    .multiMap { name, label, vcf_path ->
+        vcfs:   file(vcf_path)
+        tbis:   file("${vcf_path}.tbi")
+        labels: "--resource:${name},${label}"
+    }
+
+    known_indels   = ch_resources_indel.vcfs.toList()
+    known_indels_tbi   = ch_resources_indel.tbis.toList()
+    known_indels_labels = ch_resources_indel.labels.toList()
+
+    /*for ( known_site_file in params.genomes[params.genome].known_sites ) {
       def known_site_tbi_file = known_site_file+".tbi"
       def file_exists = file(known_site_file).exists()
       def tbi_exists = file(known_site_tbi_file).exists()
@@ -116,6 +138,7 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
         }  
       }
     }
+    */
 
     ch_vqsr = GATK4_MERGEVCFS_GENOTYPEGVCFS.out.vcf
       .join( GATK4_MERGEVCFS_GENOTYPEGVCFS.out.tbi )

@@ -16,9 +16,9 @@ workflow BAM_BASE_RECALIBRATION_GATK4 {
     ch_dict   // channel: [ val(meta), path(dict) ]
 
   main:
-    ch_versions = Channel.empty()
-    ch_bqsr_bam = Channel.empty()
-    ch_bqsr_bai = Channel.empty()
+    ch_versions = channel.empty()
+    ch_bqsr_bam = channel.empty()
+    ch_bqsr_bai = channel.empty()
 
     fasta = ch_fasta.map{ meta, fasta -> [ fasta ] }
     fai = ch_fai.map{ meta, fai -> [ fai ] }
@@ -27,7 +27,7 @@ workflow BAM_BASE_RECALIBRATION_GATK4 {
     known_sites = []
     known_sites_tbi = []
     
-    for ( known_site_file in params.genomes[params.genome].known_sites ) {
+    for ( known_site_file in params.genomes[params.genome].known_sites_bsqr ) {
       def known_site_tbi_file = known_site_file+".tbi"
       def file_exists = file(known_site_file).exists()
       def tbi_exists = file(known_site_tbi_file).exists()
