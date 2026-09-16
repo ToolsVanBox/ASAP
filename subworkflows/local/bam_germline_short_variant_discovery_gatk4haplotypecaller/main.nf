@@ -96,7 +96,7 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
     .multiMap { name, label, vcf_path ->
         vcfs:   file(vcf_path)
         tbis:   file("${vcf_path}.tbi")
-        labels: "--resource:${name},${label}"
+        labels: "--resource:${name},${label} ${vcf_path}"
     }
 
     known_snps   = ch_resources_snp.vcfs.toList()
@@ -107,7 +107,7 @@ workflow BAM_GERMLINE_SHORT_VARIANT_DISCOVERY_GATK4HAPLOTYPECALLER {
     .multiMap { name, label, vcf_path ->
         vcfs:   file(vcf_path)
         tbis:   file("${vcf_path}.tbi")
-        labels: "--resource:${name},${label}"
+        labels: "--resource:${name},${label} ${vcf_path}"
     }
 
     known_indels   = ch_resources_indel.vcfs.toList()
